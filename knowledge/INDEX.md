@@ -1,11 +1,11 @@
-# Knowledge Index — Reverse Engineering Study
+# Knowledge Index - Reverse Engineering Study
 
 Target Device: POCO X3 NFC (Qualcomm SM7150-AC, Adreno 618, KernelSU)
-Progress: 14/217 indexed (6.5%)
+Progress: 14/245 indexed (5.7%)
 
 ## 1. Xtra-Kernel-Manager (12 Rust + 16 Kotlin)
 
-### Rust Native (X01-X12) — ALL DONE
+### Rust Native (X01-X12) - ALL DONE
 | ID | File | Status |
 |----|------|--------|
 | X01 | src/lib.rs | ✅ |
@@ -21,115 +21,98 @@ Progress: 14/217 indexed (6.5%)
 | X11 | src/memory/mod.rs | ✅ |
 | X12 | Cargo.toml | ✅ |
 
-### Kotlin (X13-X28) — ALL TODO
+### Kotlin (X13-X28) - ALL TODO
 | ID | File | Status |
 |----|------|--------|
 | X13 | domain/native/NativeLib.kt | ⬜ |
 | X14 | domain/root/RootManager.kt | ⬜ |
 | X15 | utils/RootShell.kt | ⬜ |
 | X16 | domain/SmartCPULocker.kt | ⬜ |
-| X17-X28 | use cases, models, repos, services | ⬜ |
+| X17 | domain/usecase/CPUControlUseCase.kt | ⬜ |
+| X18 | domain/usecase/GPUControlUseCase.kt | ⬜ |
+| X19 | domain/usecase/ThermalControlUseCase.kt | ⬜ |
+| X20-X28 | data models, repos, services | ⬜ |
 
 ## 2. SmartPack-Kernel-Manager (31 files TODO)
-
-### CPU (S07-S15)
-| ID | File | Status |
-|----|------|--------|
-| S07 | CPUFreq.java (32KB) | ⬜ |
-| S08 | CPUTimes.java (17.9KB) | ⬜ |
-| S11 | MSMPerformance.java | ⬜ |
-| S13 | CPUBoost.java | ⬜ |
-| S14 | CPUInputBoost.java | ⬜ |
-
-### GPU (S16-S20)
-| ID | File | Status |
-|----|------|--------|
-| S17 | GPUFreq.java (15.1KB) | ⬜ |
-| S19 | AdrenoIdler.java | ⬜ |
-
-### Memory/VM/IO/Thermal
-| ID | File | Status |
-|----|------|--------|
-| S22 | ZRAM.java | ⬜ |
-| S24 | IO.java | ⬜ |
-| S26 | MSMThermal.java (24KB) | ⬜ |
-| S28 | Battery.java (17KB) | ⬜ |
-
-### Root/Utils
-| ID | File | Status |
-|----|------|--------|
-| S01 | Control.java | ⬜ |
-| S05 | Utils.java (21.9KB) | ⬜ |
-| S06 | Device.java (14.1KB) | ⬜ |
-
-### Profiles
-| ID | File | Status |
-|----|------|--------|
-| S29 | ProfileFragment.java | ⬜ |
-| S31 | ApplyOnBoot.java | ⬜ |
+S01-S31: CPU, GPU, VM, IO, Thermal, Battery, Root, Profiles, Utils
 
 ## 3. RvKernel-Manager (10 files TODO)
-
-| ID | File | Status |
-|----|------|--------|
-| R01 | utils/Utils.kt | ⬜ |
-| R02 | utils/SoCUtils.kt | ⬜ |
-| R03 | utils/KernelUtils.kt | ⬜ |
-| R04 | utils/BatteryUtils.kt | ⬜ |
-| R05-R07 | ViewModels | ⬜ |
-| R08 | NavigationRoute.kt | ⬜ |
+R01-R10: SoC utils, Kernel params, Battery, ViewModels, Navigation
 
 ## 4. ZKM (14 files TODO)
-
-| ID | File | Status |
-|----|------|--------|
-| Z01 | AdrenoUtils.kt (7.2KB) | ⬜ |
-| Z02 | GenericGpuUtils.kt | ⬜ |
-| Z06 | AdrenoBusTab.kt (18.7KB) | ⬜ |
-| Z09 | CpuGpuUtils.kt | ⬜ |
-| Z13 | OverallScreen.kt (72.1KB) | ⬜ |
+Z01-Z14: AdrenoUtils, BusDCVS, GPU discovery, CPU/GPU/Memory/Battery screens
 
 ## 5. AZenith (19 files TODO)
-
-### C Daemon (A01-A10)
-| ID | File | Status |
-|----|------|--------|
-| A01 | main.c (23KB) | ⬜ |
-| A02 | AZenith_profiler.c | ⬜ |
-| A03 | bypass_charge.c (14.8KB) | ⬜ |
-| A04 | CLI.c (10.1KB) | ⬜ |
-| A09 | misc_utils.c (17.4KB) | ⬜ |
-
-### Kotlin Manager (A11-A15)
-| ID | File | Status |
-|----|------|--------|
-| A11 | AppMonitor.kt (18.9KB) | ⬜ |
-| A12 | RootUtils.kt | ⬜ |
-| A15 | TweakScreen.kt (46.3KB) | ⬜ |
-
-### Shell Scripts (A16-A19)
-| ID | File | Status |
-|----|------|--------|
-| A16 | sys.azenith-profilesettings.sh (70.8KB) | ⬜ |
-| A17 | sys.azenith-utilityconf.sh | ⬜ |
+A01-A10: C daemon (main.c, profiler, bypass_charge, CLI, misc_utils)
+A11-A15: Kotlin manager (AppMonitor, RootUtils, TweakScreen)
+A16-A19: Shell scripts (profilesettings 70.8KB, utilityconf)
 
 ## 6. Shizuku (7 files TODO)
-SH01-SH07: server, binder, auth, shell, manager, utils, home
+SH01-SH07: ShizukuService, BinderSender, AuthManager, ShellLoader, ManagerProvider, SystemApis, HomeActivity
 
 ## 7. Shizuku-API (7 files TODO)
 SA01-SA07: Shizuku.java, BinderWrapper, RemoteProcess, ServiceHelper, AIDL, Provider, Service
 
-## 8. Encore Tweaks — BELUM DI-CLONE
-@todo: clone https://github.com/Rem01Gaming/encore.git
+## 8. Encore Tweaks (14 C++ + 12 Shell)
 
-## 9. SkiaShift — BELUM DI-CLONE
-@todo: clone https://github.com/Jefino9488/SkiaShift.git
+### C++ Core
+| ID | File | KB | Status |
+|----|------|----|--------|
+| EN01 | jni/Main.cpp | 20.3 | ⬜ |
+| EN02 | jni/EncoreCLI.cpp | 6.3 | ⬜ |
+| EN03 | jni/EncoreConfigStore.cpp | 7.6 | ⬜ |
+| EN04 | jni/Profiler.cpp | 4.8 | ⬜ |
+| EN05 | jni/DeviceMitigationStore.cpp | 13 | ⬜ |
+| EN06 | jni/InotifyHandler.cpp | 6.3 | ⬜ |
+| EN07 | jni/base/DeviceInfo.cpp | 2.3 | ⬜ |
+| EN08 | jni/base/MiscUtility.cpp | 2.4 | ⬜ |
+| EN09 | jni/base/ProcessUtility.cpp | 2.6 | ⬜ |
+| EN10 | jni/base/GameRegistry.cpp | 7.1 | ⬜ |
+| EN11 | jni/base/InotifyWatcher.cpp | 14.5 | ⬜ |
+| EN12 | jni/base/LockFile.cpp | 4.6 | ⬜ |
+| EN13 | jni/base/PIDTracker.cpp | 4.5 | ⬜ |
+| EN14 | jni/base/SystemStatus.cpp | 2 | ⬜ |
 
-## 10. COPG — BELUM DI-CLONE
-@todo: clone https://github.com/AlirezaParsi/COPG.git
+### Shell Scripts
+| ID | File | KB | Status |
+|----|------|----|--------|
+| EN15 | scripts/encore_profiler.sh | 25.7 | ⬜ |
+| EN16 | scripts/encore_utility.sh | 4.4 | ⬜ |
+| EN17 | module/action.sh | 1.5 | ⬜ |
+| EN18 | module/service.sh | 2.4 | ⬜ |
+| EN19 | module/customize.sh | 7.6 | ⬜ |
 
-## 11. DPIS — BELUM DI-CLONE
-@todo: clone https://github.com/Kwensiu/DPIS.git
+## 9. SkiaShift (3 Kotlin + 1 C++)
+| ID | File | KB | Status |
+|----|------|----|--------|
+| SS01 | app/src/main/cpp/skiashift.cpp | 10.1 | ⬜ |
+| SS02 | app/src/main/java/MainActivity.kt | 24.5 | ⬜ |
+| SS03 | app/src/main/java/SkiaShiftModule.kt | 1.7 | ⬜ |
+| SS04 | app/src/main/java/BootReceiver.kt | 1.9 | ⬜ |
+| SS05 | app/src/main/java/AppManager.kt | 2.5 | ⬜ |
+
+## 10. COPG (2 C++ + 3 Shell)
+| ID | File | KB | Status |
+|----|------|----|--------|
+| CG01 | src/spoof_module.cpp | 41.5 | ⬜ |
+| CG02 | src/unified_controller.cpp | 40.3 | ⬜ |
+| CG03 | src/atexit.cpp | 4.2 | ⬜ |
+| CG04 | module/customize.sh | 12.5 | ⬜ |
+| CG05 | module/service.sh | 0.3 | ⬜ |
+
+## 11. DPIS (5 core Java + 1 native C++)
+| ID | File | KB | Status |
+|----|------|----|--------|
+| DP01 | app/src/main/cpp/dpis_native.cpp | 71.8 | ⬜ |
+| DP02 | app/src/main/java/MainActivity.java | 162.9 | ⬜ |
+| DP03 | app/src/main/java/DpisApplication.java | 6 | ⬜ |
+| DP04 | app/src/main/java/RootAccessProbe.java | 5.3 | ⬜ |
+| DP05 | app/src/main/java/ModuleMain.java | 15.7 | ⬜ |
+| DP06 | app/src/main/java/AppProcessHookInstaller.java | 15.7 | ⬜ |
+| DP07 | app/src/main/java/SystemServerDisplayEnvironmentInstaller.java | 95.9 | ⬜ |
+| DP08 | app/src/main/java/ForceTextSizeHookInstaller.java | 51.2 | ⬜ |
+| DP09 | app/src/main/java/HyperOsRustProcessHookInstaller.java | 9.9 | ⬜ |
+| DP10 | app/src/main/java/LegacyModuleHook.java | 30.9 | ⬜ |
 
 ---
 
@@ -137,17 +120,17 @@ SA01-SA07: Shizuku.java, BinderWrapper, RemoteProcess, ServiceHelper, AIDL, Prov
 
 | Source | Indexed | TODO |
 |--------|---------|------|
-| Xtra-Kernel (Rust) | 12 | 0 |
-| Xtra-Kernel (Kotlin) | 0 | 16 |
+| Xtra-Kernel Rust | 12 | 0 |
+| Xtra-Kernel Kotlin | 0 | 16 |
 | SmartPack | 0 | 31 |
 | RvKernel | 0 | 10 |
 | ZKM | 0 | 14 |
 | AZenith | 0 | 19 |
 | Shizuku | 0 | 7 |
 | Shizuku-API | 0 | 7 |
-| Encore | 0 | TBD |
-| SkiaShift | 0 | TBD |
-| COPG | 0 | TBD |
-| DPIS | 0 | TBD |
+| Encore Tweaks | 0 | 19 |
+| SkiaShift | 0 | 5 |
+| COPG | 0 | 5 |
+| DPIS | 0 | 10 |
 
-**Progress: 14/217 (6.5%)**
+Progress: 14/245 (5.7%)

@@ -179,6 +179,19 @@ object NativeLib {
     external fun loadBootConfigNative(): String
     external fun applyBootConfigNative(): Int
 
+    // Tier System
+    external fun detectTierNative(): Int
+    external fun getFrameworkStatusJsonNative(): String
+    external fun getUnlockedFeaturesNative(): Int
+    external fun getLockedFeaturesNative(): Int
+
+    // Feature Checker
+    external fun verifyFeatureNative(feature: String): String
+    external fun verifyAllFeaturesNative(): Int
+    external fun getCheckerLogNative(): String
+    external fun clearCheckerLogNative(): Int
+    external fun exportLogsNative(): String
+
     // Kotlin wrappers
     fun detectCpuClusters(): List<ClusterInfo>? {
         if (!isLoaded) return null

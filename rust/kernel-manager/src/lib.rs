@@ -13,6 +13,8 @@ mod renderer;
 mod spoof;
 mod display_control;
 mod daemon;
+mod tier;
+mod checker;
 
 use jni::objects::{JClass, JString};
 use jni::sys::{jfloat, jint, jlong, jstring};
@@ -686,4 +688,66 @@ pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_loadBoot
 #[unsafe(no_mangle)]
 pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_applyBootConfigNative(_env: JNIEnv, _class: JClass) -> jint {
     if daemon::apply_boot_config() { 1 } else { 0 }
+}
+
+// ==================== TIER SYSTEM ====================
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_detectTierNative(_env: JNIEnv, _class: JClass) -> jint {
+    let status = tier::FrameworkStatus::detect();
+    status.current_tier as jint
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_getFrameworkStatusJsonNative(env: JNIEnv, _class: JClass) -> jstring {
+    let status = tier::FrameworkStatus::detect();
+    create_jstring_safe(&env, status.to_json())
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_getUnlockedFeaturesNative(env: JNIEnv, _class: JClass) -> jint {
+    let status = tier::FrameworkStatus::detect();
+    tier::get_unlocked_features(&status.current_tier).len() as jint
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_getLockedFeaturesNative(env: JNIEnv, _class: JClass) -> jint {
+    let status = tier::FrameworkStatus::detect();
+    tier::get_locked_features(&status.current_tier).len() as jint
+}
+
+// ==================== FEATURE CHECKER ====================
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_verifyFeatureNative(env: JNIEnv, _class: JClass, feature: JString) -> jstring {
+    let f: String = env.get_string(&feature).map(|s| s.into()).unwrap_or_default();
+    let result = checker::verify_feature(&f);
+    checker::log_check(&result);
+    let status = if result.passed { "PASS" } else { "FAIL" };
+    create_jstring_safe(&env, format!("{}: {}", status, result.message))
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_verifyAllFeaturesNative(_env: JNIEnv, _class: JClass) -> jint {
+    let status = tier::FrameworkStatus::detect();
+    let results = checker::verify_all_features(&status.current_tier);
+    checker::get_pass_rate(&results) as jint
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_getCheckerLogNative(env: JNIEnv, _class: JClass) -> jstring {
+    create_jstring_safe(&env, checker::get_log_content())
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_clearCheckerLogNative(_env: JNIEnv, _class: JClass) -> jint {
+    if checker::clear_logs() { 1 } else { 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_exportLogsNative(env: JNIEnv, _class: JClass) -> jstring {
+    match checker::export_logs_zip() {
+        Some(path) => create_jstring_safe(&env, path),
+        None => create_jstring_safe(&env, String::new()),
+    }
 }

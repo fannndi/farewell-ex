@@ -12,6 +12,7 @@ mod wake;
 mod renderer;
 mod spoof;
 mod display_control;
+mod daemon;
 
 use jni::objects::{JClass, JString};
 use jni::sys::{jfloat, jint, jlong, jstring};
@@ -583,4 +584,106 @@ pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_applyDen
 pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_applyFontPresetNative(env: JNIEnv, _class: JClass, preset: JString) -> jint {
     let p: String = env.get_string(&preset).map(|s| s.into()).unwrap_or_default();
     if display_control::apply_font_preset(&p) { 1 } else { 0 }
+}
+
+// ==================== DAEMON (Foreground Monitor + Per-App) ====================
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_getForegroundAppNative(env: JNIEnv, _class: JClass) -> jstring {
+    create_jstring_safe(&env, daemon::get_foreground_app())
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_startProfileMonitorNative(_env: JNIEnv, _class: JClass) -> jint {
+    daemon::ProfileManager::start_monitor_thread();
+    1
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_saveProfilesNative(env: JNIEnv, _class: JClass, json: JString) -> jint {
+    let j: String = env.get_string(&json).map(|s| s.into()).unwrap_or_default();
+    if daemon::save_profiles_to_file("/data/local/tmp/farewell_profiles.json", &j) { 1 } else { 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_loadProfilesNative(env: JNIEnv, _class: JClass) -> jstring {
+    create_jstring_safe(&env, daemon::load_profiles_from_file("/data/local/tmp/farewell_profiles.json"))
+}
+
+// ==================== Framework Detection ====================
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_hasKernelSuNative(_env: JNIEnv, _class: JClass) -> jint {
+    if daemon::has_kernelsu() { 1 } else { 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_hasMagiskNative(_env: JNIEnv, _class: JClass) -> jint {
+    if daemon::has_magisk() { 1 } else { 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_hasRezygiskNative(_env: JNIEnv, _class: JClass) -> jint {
+    if daemon::has_rezygisk() { 1 } else { 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_hasLsposedNative(_env: JNIEnv, _class: JClass) -> jint {
+    if daemon::has_lsposed() { 1 } else { 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_hasResetpropNative(_env: JNIEnv, _class: JClass) -> jint {
+    if daemon::has_resetprop() { 1 } else { 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_getFrameworkStatusNative(env: JNIEnv, _class: JClass) -> jstring {
+    create_jstring_safe(&env, daemon::get_framework_status())
+}
+
+// ==================== DND + Game Controls ====================
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setDndEnabledNative(_env: JNIEnv, _class: JClass, enabled: jint) -> jint {
+    if daemon::set_dnd_enabled(enabled != 0) { 1 } else { 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setImmersiveModeNative(env: JNIEnv, _class: JClass, pkg: JString, enabled: jint) -> jint {
+    let p: String = env.get_string(&pkg).map(|s| s.into()).unwrap_or_default();
+    if daemon::set_immersive_mode(&p, enabled != 0) { 1 } else { 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_dropCachesAndKillNative(_env: JNIEnv, _class: JClass) -> jint {
+    if daemon::drop_caches_and_kill() { 1 } else { 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setScreenBrightnessNative(_env: JNIEnv, _class: JClass, value: jint) -> jint {
+    if daemon::set_screen_brightness(value) { 1 } else { 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setScreenBrightnessModeManualNative(_env: JNIEnv, _class: JClass) -> jint {
+    if daemon::set_screen_brightness_mode_manual() { 1 } else { 0 }
+}
+
+// ==================== Apply-on-Boot ====================
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_saveBootConfigNative(env: JNIEnv, _class: JClass, config: JString) -> jint {
+    let c: String = env.get_string(&config).map(|s| s.into()).unwrap_or_default();
+    if daemon::save_boot_config(&c) { 1 } else { 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_loadBootConfigNative(env: JNIEnv, _class: JClass) -> jstring {
+    create_jstring_safe(&env, daemon::load_boot_config())
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_applyBootConfigNative(_env: JNIEnv, _class: JClass) -> jint {
+    if daemon::apply_boot_config() { 1 } else { 0 }
 }

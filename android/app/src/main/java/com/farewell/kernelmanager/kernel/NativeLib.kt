@@ -153,6 +153,32 @@ object NativeLib {
     external fun applyDensityPresetNative(preset: String): Int
     external fun applyFontPresetNative(preset: String): Int
 
+    // Daemon (Foreground Monitor + Per-App)
+    external fun getForegroundAppNative(): String
+    external fun startProfileMonitorNative(): Int
+    external fun saveProfilesNative(json: String): Int
+    external fun loadProfilesNative(): String
+
+    // Framework Detection
+    external fun hasKernelSuNative(): Int
+    external fun hasMagiskNative(): Int
+    external fun hasRezygiskNative(): Int
+    external fun hasLsposedNative(): Int
+    external fun hasResetpropNative(): Int
+    external fun getFrameworkStatusNative(): String
+
+    // DND + Game Controls
+    external fun setDndEnabledNative(enabled: Boolean): Int
+    external fun setImmersiveModeNative(pkg: String, enabled: Boolean): Int
+    external fun dropCachesAndKillNative(): Int
+    external fun setScreenBrightnessNative(value: Int): Int
+    external fun setScreenBrightnessModeManualNative(): Int
+
+    // Apply-on-Boot
+    external fun saveBootConfigNative(config: String): Int
+    external fun loadBootConfigNative(): String
+    external fun applyBootConfigNative(): Int
+
     // Kotlin wrappers
     fun detectCpuClusters(): List<ClusterInfo>? {
         if (!isLoaded) return null

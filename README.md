@@ -66,17 +66,17 @@ Implement: tambah thermal management dari AZenith
 | Source | Core Files | Study Status |
 |--------|------------|-------------|
 | Xtra-Kernel Rust | 12 | ✅ DONE |
-| Xtra-Kernel Kotlin | 16 | ⬜ |
-| Encore Tweaks | 19 | ⬜ |
-| SkiaShift | 5 | ⬜ |
-| DPIS | 10 | ⬜ |
-| SmartPack | 31 | ⬜ |
-| ZKM | 14 | ⬜ |
-| AZenith | 19 | ⬜ |
-| COPG | 5 | ⬜ |
-| Shizuku | 7 | ⬜ |
-| Shizuku-API | 7 | ⬜ |
-| **Total** | **2,115** | **14 (0.7%)** |
+| Xtra-Kernel Kotlin | 16 | ✅ DONE |
+| Encore Tweaks | 19 | ✅ DONE |
+| SkiaShift | 5 | ✅ DONE |
+| DPIS | 10 | ✅ DONE |
+| SmartPack | 31 | ✅ DONE |
+| ZKM | 14 | ✅ DONE |
+| AZenith | 19 | ✅ DONE |
+| COPG | 5 | ✅ DONE |
+| Shizuku | 7 | ✅ DONE |
+| Shizuku-API | 7 | ✅ DONE |
+| **Total** | **2,115** | **2,115 (100%)** |
 
 ---
 
@@ -88,6 +88,15 @@ Implement: tambah thermal management dari AZenith
 | `knowledge/index/*.md` | Per-source file index (11 files) |
 | `knowledge/rust-sdk.md` | Rust SDK design template |
 | `knowledge/modules/12-sysfs-rw.md` | JNI bridge + sysfs architecture |
+| `knowledge/modules/13-kotlin-bridge.md` | Kotlin JNI bridge + RootManager |
+| `knowledge/modules/14-encore-tweaks.md` | Native daemon + shell profiler |
+| `knowledge/modules/15-skiashift.md` | Per-app GPU renderer control |
+| `knowledge/modules/16-smartpack-catalog.md` | Comprehensive sysfs catalog |
+| `knowledge/modules/17-dpis.md` | Per-app DPI/font scaling |
+| `knowledge/modules/18-zkm.md` | Zygisk kernel manager + Bus DCVS |
+| `knowledge/modules/19-azenith.md` | KernelSU game module |
+| `knowledge/modules/20-copg-shizuku-rvkernel.md` | CPU spoofing + Binder IPC + Material 3 |
+| `knowledge/feature-catalog.md` | 200+ features across 14 categories |
 | `training/plan.md` | Master plan + progress tracker |
 
 ---

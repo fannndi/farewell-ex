@@ -6,7 +6,7 @@
 ## Architecture (from Xtra-Kernel)
 
 ```
-lib.rs              → JNI bridge, 28 exported functions
+lib.rs              → JNI bridge, 34+ exported functions
 ├── cpu/cpu.rs      → Cluster detection, core data, load, temp, model
 ├── cpu/mod.rs      → re-exports
 ├── gpu/gpu.rs      → Multi-vendor detection (Adreno/Mali), freq, busy, freq table
@@ -16,8 +16,12 @@ lib.rs              → JNI bridge, 28 exported functions
 ├── power/power.rs  → Battery (persistent FD), charging, cycle count, capacity
 ├── power/thermal.rs → Zone auto-detection (cpu/tsens), temp reading
 ├── power/mod.rs    → re-exports
-└── utils.rs        → Sysfs read (rustix+libc), cache, system property
+├── disk/disk.rs    → Disk I/O stats (exists, NOT wired into lib.rs)
+├── disk/mod.rs     → re-exports
+└── utils.rs        → Sysfs read (rustix+libc), TTL cache, system property, file_exists
 ```
+
+**Note:** `disk/` module exists in source but is NOT imported in `lib.rs`. Unused.
 
 ## Key Design Decisions (from Xtra-Kernel)
 

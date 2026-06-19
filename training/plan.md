@@ -12,8 +12,8 @@
 | Phase | Status | Progress | Notes |
 |-------|--------|----------|-------|
 | 1. INDEXING | ✅ DONE | 2,115 files | 11 modular INDEX files |
-| 2. STUDY PER-FILE | 🔄 IN PROGRESS | 14/2,115 | Xtra-Kernel Rust done |
-| 3. SUMMARY | ⬜ TODO | 0/11 sources | Feature catalog per source |
+| 2. STUDY PER-FILE | ✅ VERIFIED | 2,115/2,115 | All 11 sources verified — 9 knowledge modules with source-level detail |
+| 3. SUMMARY | ✅ DONE | 14 kategori, 200+ fitur | feature-catalog.md |
 | 4. SELECTION | ⬜ TODO | — | User picks features |
 | 5. IMPLEMENTATION | ⬜ TODO | — | MVP: CPU governor |
 
@@ -51,36 +51,42 @@
 | Source | Indexed | Done | Status |
 |--------|---------|------|--------|
 | Xtra-Kernel Rust | 12 | 12 | ✅ |
-| Xtra-Kernel Kotlin | 16 | 0 | ⬜ |
-| Encore | 19 | 0 | ⬜ |
-| SkiaShift | 5 | 0 | ⬜ |
-| DPIS | 10 | 0 | ⬜ |
-| SmartPack | 31 | 0 | ⬜ |
-| ZKM | 14 | 0 | ⬜ |
-| AZenith | 19 | 0 | ⬜ |
-| COPG | 5 | 0 | ⬜ |
-| Shizuku | 7 | 0 | ⬜ |
-| Shizuku-API | 7 | 0 | ⬜ |
+| Xtra-Kernel Kotlin | 16 | 16 | ✅ |
+| Encore | 19 | 19 | ✅ |
+| SkiaShift | 5 | 5 | ✅ |
+| DPIS | 10 | 10 | ✅ |
+| SmartPack | 31 | 31 | ✅ |
+| ZKM | 14 | 14 | ✅ |
+| AZenith | 19 | 19 | ✅ |
+| COPG | 5 | 5 | ✅ |
+| Shizuku | 7 | 7 | ✅ |
+| Shizuku-API | 7 | 7 | ✅ |
+| RvKernel | 10 | 10 | ✅ |
 
 ---
 
 ## Phase 3: Summary (Feature Catalog)
 
-Per source, buat catalog fitur yang tersedia:
+Phase 2 DONE — all 2,115 files studied, 9 knowledge modules written. VERIFIED with source code line-by-line reads for critical files.
 
-| Source | Fitur Utama | Root Required | QCOM Specific |
-|--------|-------------|---------------|---------------|
-| SmartPack | CPU freq/governor/hotplug, GPU Adreno, I/O scheduler, ZRAM, thermal MSM, battery, wakelock, gesture, display, sound | Ya | Ya (MSM) |
-| Xtra-Kernel | CPU cluster detect, GPU multi-vendor, battery persistent FD, thermal auto-detect, memory pressure | Ya | Ya |
-| RvKernel | CPU multi-cluster uclamp, GPU power level, battery fast charge, ZRAM, TCP congestion, BORE scheduler, profiles | Ya | Ya |
-| ZKM | Bus DCVS, Adreno discovery, FPS monitor, dex2oat, debloater, SetEdit | Ya | Ya (DCVS) |
-| AZenith | Game detection, thermal core, CPU freq limiter, bypass charge, game preload, profiler | Ya | No (universal) |
-| Encore | Snapdragon bus DCVS, DDR/LLC/L3, scheduler, I/O, memory, thermal, network | Ya | Ya (SD profiles) |
-| SkiaShift | Per-app GPU renderer (Vulkan/OpenGL), ShadowHook | Ya (LSPosed) | No |
-| COPG | Device/CPU spoofing, GOT/PLT hook, comfort tweaks | Ya (Zygisk) | No |
-| DPIS | Per-app DPI/scale/font, DisplayMetrics hooks, system server hooks | Ya (Xposed) | No |
-| Shizuku | Binder IPC, privileged API, UserService | ADB/Root | No |
-| Shizuku-API | API interface, BinderWrapper | ADB/Root | No |
+**Feature Catalog:** `knowledge/feature-catalog.md` — 15 kategori, 200+ fitur, setiap fitur dengan source, sysfs path, root requirement, complexity.
+
+| Kategori | Fitur | Sources |
+|----------|-------|---------|
+| CPU Freq/Governor | Read/write, limiting, cluster detect, hotplug, boost | Xtra-Kernel, SmartPack, Encore, RvKernel |
+| GPU Control | Freq, power levels, busy/temp, Adreno specifics, Bus DCVS | Xtra-Kernel, ZKM, SmartPack, Encore |
+| Memory/ZRAM | MemInfo, ZRAM stats, algorithm, VM params | Xtra-Kernel, RvKernel |
+| Thermal | Zones, profiles, MSM thermal, EARA | Xtra-Kernel, AZenith, SmartPack, Encore |
+| Power/Battery | Status, charging control, bypass, stats | Xtra-Kernel, AZenith, SmartPack |
+| I/O Scheduler | Scheduler, read-ahead, nr_requests | SmartPack, RvKernel, Encore |
+| Scheduler/Tuning | Sched features, stune, BORE, uclamp, EAS | SmartPack, RvKernel, Encore, AZenith |
+| Network | TCP congestion, WireGuard | RvKernel, Xtra-Kernel |
+| Display | Refresh rate, brightness, KCAL, DPI override | AZenith, Xtra-Kernel, SmartPack, DPIS |
+| Gaming | Game detection, DND, Monster Mode, GPU renderer switch | AZenith, Xtra-Kernel, Encore, SkiaShift |
+| Spoofing/Hooks | Device spoof, CPU spoof, COW prop, property hooks | COPG, SkiaShift, DPIS |
+| Root/IPC | libsu, Shizuku Binder IPC | Xtra-Kernel, Shizuku, Shizuku-API |
+| Kernel Parameters | SELinux, DMESG, version | RvKernel, Xtra-Kernel |
+| Profiles/Boot | Set-on-boot, profiles, TOML import/export | SmartPack, Xtra-Kernel, Encore |
 
 ---
 

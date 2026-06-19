@@ -1,149 +1,123 @@
 # farewell-ex — Kernel Manager (Rust/Android)
 
 **Target Device:** POCO X3 NFC (Qualcomm SM7150-AC, Adreno 618)
-**Root:** KernelSU
-**Goal:** Reverse engineering 11 source repos → Rust kernel manager library → Android app
+**Root:** KernelSU-Next + ZygiskNext + Vector
+**Goal:** Reverse engineering 16 source repos → Rust kernel manager library → Android app
 
 ---
 
-## Commands (untuk Session Baru)
+## 5-Tier Access System
 
-### Resume Progress
-Ketik di session baru:
-```
-Resume plan: lanjut Phase 2 step berikutnya dari training/plan.md
-```
-
-### Check Status
-```
-Status plan: berapa persen progress, file mana yang sudah dipelajari
-```
-
-### Start New Phase
-Setelah Phase 2 selesai:
-```
-Summary: buat feature catalog dari knowledge/modules/ per source
-```
-
-### Implementation
-```
-Implement: bikin CPU governor switching dengan Rust SDK (MVP)
-Implement: tambah GPU renderer switching dari SkiaShift
-Implement: tambah thermal management dari AZenith
-```
+| Tier | Framework | Detection | Features |
+|------|-----------|-----------|----------|
+| 1 | Non-ROOT | — | Read-only info |
+| 2 | ADB | Shizuku | wm density, settings |
+| 3 | Full ROOT | KernelSU-Next | All sysfs, resetprop |
+| 4 | Zygisk | ZygiskNext | Per-app spoof/renderer |
+| 5 | Xposed | Vector | Per-app DPI/font |
 
 ---
 
-## Source References (gitignored — `training/references/`)
+## Source References (16 repos — `training/references/`)
 
-### Kernel Managers
-| Repo | Files | Language | Fokus |
-|------|-------|----------|-------|
-| Xtra-Kernel-Manager | 451 | Kotlin + **Rust JNI** | High-perf native reader, modern UI |
-| SmartPack-Kernel-Manager | 452 | Java | Battle-tested, comprehensive sysfs |
-| RvKernel-Manager | 118 | Kotlin/Compose | Minimalis, dynamic sysfs probing |
-| ZKM | 443 | Kotlin/Compose | Bus DCVS, GPU discovery |
+### Kernel Managers (11 sources)
+| Repo | Language | Focus |
+|------|----------|-------|
+| Xtra-Kernel-Manager | Kotlin + Rust JNI | Native reader, modern UI |
+| SmartPack-Kernel-Manager | Java | Battle-tested sysfs catalog |
+| RvKernel-Manager | Kotlin/Compose | Dynamic sysfs probing |
+| ZKM | Kotlin/Compose | Bus DCVS, GPU discovery |
+| AZenith | C + Kotlin | Game detection, thermal |
+| Encore Tweaks | C++ + Vue | Profile tuner, native daemon |
+| SkiaShift | Kotlin + C++ | Per-app GPU renderer |
+| COPG | C++ + shell | Zygisk device/CPU spoofing |
+| DPIS | Java | Per-app DPI/font scaling |
+| Shizuku | Java/Kotlin | Root alternative via Binder IPC |
+| Shizuku-API | Java/Kotlin | Shizuku API interface |
 
-### Performance & Gaming Modules
-| Repo | Files | Language | Fokus |
-|------|-------|----------|-------|
-| AZenith | 150 | C + Kotlin | KernelSU module, game detection, thermal core |
-| Encore Tweaks | 242 | C++ + Vue | Profile-style tuner, native daemon |
-| SkiaShift | 47 | Kotlin + C++ | Per-app GPU renderer (Vulkan/OpenGL) |
-| COPG | 64 | C++ + shell | Zygisk device/CPU spoofing |
-
-### Frameworks & Utilities
-| Repo | Files | Language | Fokus |
-|------|-------|----------|-------|
-| Shizuku | 300 | Java/Kotlin | Root alternative via Binder IPC |
-| Shizuku-API | 119 | Java/Kotlin | Shizuku API interface |
-| DPIS | 788 | Java | Per-app DPI/font scaling |
-
----
-
-## Progress
-
-| Source | Core Files | Study Status |
-|--------|------------|-------------|
-| Xtra-Kernel Rust | 12 | ✅ DONE |
-| Xtra-Kernel Kotlin | 16 | ✅ DONE |
-| Encore Tweaks | 19 | ✅ DONE |
-| SkiaShift | 5 | ✅ DONE |
-| DPIS | 10 | ✅ DONE |
-| SmartPack | 31 | ✅ DONE |
-| ZKM | 14 | ✅ DONE |
-| AZenith | 19 | ✅ DONE |
-| COPG | 5 | ✅ DONE |
-| Shizuku | 7 | ✅ DONE |
-| Shizuku-API | 7 | ✅ DONE |
-| **Total** | **2,115** | **2,115 (100%)** |
+### Frameworks & Tooling (5 sources)
+| Repo | Language | Focus |
+|------|----------|-------|
+| KernelSU-Next | Rust + Kotlin | Kernel-based root, module system |
+| ZygiskNext | C++ | Standalone Zygisk implementation |
+| Vector | Java + Kotlin + C++ | Modern Xposed (LSPlant) |
+| ZN-AuditPatch | C++ | Audit log replacement |
+| LogFox | Kotlin | Crash logging + export |
 
 ---
 
-## Knowledge Base
-
-| File | Isi |
-|------|-----|
-| `knowledge/INDEX.md` | Master index — 2,115 files, modular per source |
-| `knowledge/index/*.md` | Per-source file index (11 files) |
-| `knowledge/rust-sdk.md` | Rust SDK design template |
-| `knowledge/modules/12-sysfs-rw.md` | JNI bridge + sysfs architecture |
-| `knowledge/modules/13-kotlin-bridge.md` | Kotlin JNI bridge + RootManager |
-| `knowledge/modules/14-encore-tweaks.md` | Native daemon + shell profiler |
-| `knowledge/modules/15-skiashift.md` | Per-app GPU renderer control |
-| `knowledge/modules/16-smartpack-catalog.md` | Comprehensive sysfs catalog |
-| `knowledge/modules/17-dpis.md` | Per-app DPI/font scaling |
-| `knowledge/modules/18-zkm.md` | Zygisk kernel manager + Bus DCVS |
-| `knowledge/modules/19-azenith.md` | KernelSU game module |
-| `knowledge/modules/20-copg-shizuku-rvkernel.md` | CPU spoofing + Binder IPC + Material 3 |
-| `knowledge/feature-catalog.md` | 200+ features across 14 categories |
-| `training/plan.md` | Master plan + progress tracker |
-
----
-
-## Cross-Reference (POCO X3 NFC)
-
-| Komponen | Source Terbaik | Alasan |
-|----------|---------------|--------|
-| **App UI** | XKM + RvKernel | Kotlin/Compose + Material 3 |
-| **Native perf** | XKM | Rust JNI for zero-overhead sysfs reads |
-| **Sysfs catalog** | SmartPack | Comprehensive, battle-tested |
-| **GPU tuning** | ZKM + XKM | Adreno BusDCVS, multi-vendor |
-| **Background daemon** | Encore | Native C daemon pattern |
-| **GPU renderer** | SkiaShift | Per-app Vulkan/OpenGL override |
-| **Root API** | Shizuku | Binder IPC (faster than shell) |
-| **Profiles** | AZenith + RvKernel | Game-based auto-switch |
-| **CPU spoofing** | COPG | Zygisk GOT/PLT hooks |
-| **Thermal** | SmartPack + AZenith | MSM thermal + game mode |
-
----
-
-## Files
+## Project Structure
 
 ```
 farewell-ex/
-├── README.md
-├── .gitignore
-├── knowledge/
-│   ├── INDEX.md                 ← Master index (2,115 files)
-│   ├── index/                   ← Per-source modular indexes (11 files)
-│   │   ├── 01-SmartPack-Kernel-Manager.md
-│   │   ├── 02-Xtra-Kernel-Manager.md
-│   │   ├── 03-RvKernel-Manager.md
-│   │   ├── 04-ZKM.md
-│   │   ├── 05-AZenith.md
-│   │   ├── 06-Encore.md
-│   │   ├── 07-SkiaShift.md
-│   │   ├── 08-COPG.md
-│   │   ├── 09-DPIS.md
-│   │   ├── 10-Shizuku.md
-│   │   └── 11-Shizuku-API.md
-│   ├── rust-sdk.md              ← Rust SDK design
-│   └── modules/                 ← Extracted knowledge per module
+├── rust/kernel-manager/          ← Rust SDK (18 modules, 3,175 lines)
+│   ├── src/
+│   │   ├── sysfs.rs              ← Core engine (Xtra-Kernel)
+│   │   ├── cpu.rs                ← CPU control (Xtra-Kernel + SmartPack)
+│   │   ├── gpu.rs                ← GPU control — QCOM only (ZKM + Encore)
+│   │   ├── memory.rs             ← Memory/ZRAM (Xtra-Kernel)
+│   │   ├── power.rs              ← Battery + bypass (AZenith)
+│   │   ├── thermal.rs            ← Thermal + sconfig (SmartPack + Encore)
+│   │   ├── scheduler.rs          ← Scheduler + VM (Encore + RvKernel)
+│   │   ├── io.rs                 ← I/O scheduler (SmartPack)
+│   │   ├── network.rs            ← TCP + kernel params (RvKernel)
+│   │   ├── display.rs            ← Brightness + KCAL (SmartPack)
+│   │   ├── wake.rs               ← DT2W + sound (SmartPack)
+│   │   ├── renderer.rs           ← GPU renderer (SkiaShift)
+│   │   ├── spoof.rs              ← Device/CPU spoof (COPG)
+│   │   ├── display_control.rs    ← DPI/font (DPIS)
+│   │   ├── daemon.rs             ← Foreground monitor + per-app
+│   │   ├── tier.rs               ← 5-tier detection + feature matrix
+│   │   ├── checker.rs            ← Feature verification + logging
+│   │   └── lib.rs                ← JNI bridge (128 exports)
+│   └── Cargo.toml
+├── android/app/                  ← Kotlin/Compose app (23 files, 1,305 lines)
+│   └── src/main/java/.../
+│       ├── kernel/               ← NativeLib, RootManager, ShizukuManager, AccessManager
+│       ├── viewmodel/            ← MainVM, CPUVM, GPUVM, MemoryVM, ThermalVM, BatteryVM
+│       ├── ui/screens/           ← Dashboard, CPU, GPU, Memory, Thermal, Battery, Game, Settings
+│       ├── ui/theme/             ← Material 3 Monet
+│       └── service/              ← BootReceiver
+├── knowledge/                    ← 16 knowledge modules + feature catalog
+│   ├── modules/                  ← 25 modules (12-25)
+│   ├── index/                    ← 11 per-source indexes
+│   ├── feature-catalog.md        ← 200+ features
+│   ├── leftover.md               ← 6 features for system binary
+│   └── INDEX.md                  ← Master index
 ├── training/
-│   ├── plan.md                  ← Master plan + progress tracker
-│   ├── references/              ← (gitignored) 11 cloned repos
-│   └── log.md                   ← (gitignored) daily training log
-├── rust/kernel-manager/         ← (Phase 2)
-└── android/app/                 ← (Phase 3)
+│   ├── plan.md                   ← Master plan
+│   └── references/               ← 16 cloned repos (gitignored)
+└── README.md
+```
+
+---
+
+## Build Commands
+
+```bash
+# Rust SDK
+cd rust/kernel-manager
+cargo ndk -t arm64-v8a -o ../android/app/src/main/jniLibs build --release
+
+# Android App
+cd ../../
+./gradlew assembleDebug
+
+# Install
+adb install -r app/build/outputs/apk/debug/app-debug.apk
+```
+
+---
+
+## Feature Checker
+
+```kotlin
+// Detect tier
+val tier = NativeLib.detectTierNative() // 1-5
+
+// Verify feature
+val result = NativeLib.verifyFeatureNative("set_cpu_governor") // "PASS: OK" or "FAIL: reason"
+
+// Export logs for tester
+val zipPath = NativeLib.exportLogsNative() // ZIP with device info + checker log
 ```

@@ -1,0 +1,159 @@
+package com.farewell.kernelmanager.kernel
+
+import android.util.Log
+
+object NativeLib {
+    private const val TAG = "NativeLib"
+    private var isLoaded = false
+
+    init {
+        try {
+            System.loadLibrary("farewell_native")
+            isLoaded = true
+            Log.d(TAG, "Native library loaded")
+        } catch (e: UnsatisfiedLinkError) {
+            Log.e(TAG, "Failed to load: ${e.message}")
+            isLoaded = false
+        }
+    }
+
+    fun isAvailable(): Boolean = isLoaded
+
+    // CPU
+    external fun detectCpuClustersNative(): String
+    external fun readCoreDataNative(): String
+    external fun readCpuLoadNative(): Float
+    external fun readCpuTemperatureNative(): Float
+    external fun readCoreTemperatureNative(core: Int): Float
+    external fun getCpuModelNative(): String
+    external fun setGovernorNative(governor: String): Int
+    external fun setFreqLimitNative(core: Int, min: Int, max: Int): Int
+    external fun setCoreOnlineNative(core: Int, online: Boolean): Int
+
+    // GPU
+    external fun readGpuFreqNative(): Int
+    external fun readGpuBusyNative(): Int
+    external fun resetGpuStatsNative()
+    external fun getGpuVendorNative(): String
+    external fun getGpuModelNative(): String
+    external fun getGpuAvailableFrequenciesNative(): String
+    external fun getGpuAvailablePoliciesNative(): String
+    external fun getGpuDriverInfoNative(): String
+    external fun setGpuPowerLevelsNative(min: Int, max: Int): Int
+    external fun setGpuForceNative(state: String, value: Boolean): Int
+    external fun setGpuFreqLimitNative(min: Int, max: Int): Int
+
+    // Memory
+    external fun readMemInfoNative(): String
+    external fun readZramSizeNative(): Long
+    external fun getMemoryPressureNative(): Float
+    external fun getSwappinessNative(): Int
+    external fun getZramCompressionRatioNative(): Float
+    external fun getZramAlgorithmNative(): String
+    external fun getAvailableZramAlgorithmsNative(): String
+    external fun setSwappinessNative(value: Int): Int
+    external fun setDirtyRatioNative(value: Int): Int
+    external fun setMinFreeKbytesNative(value: Int): Int
+
+    // Thermal
+    external fun readThermalZonesNative(): String
+    external fun setThermalSconfigNative(preset: String): Int
+
+    // Power
+    external fun readBatteryLevelNative(): Int
+    external fun readBatteryTempNative(): Int
+    external fun readBatteryVoltageNative(): Int
+    external fun readBatteryCurrentNative(): Int
+    external fun isChargingNative(): Int
+    external fun readCycleCountNative(): Int
+    external fun readBatteryHealthNative(): String
+    external fun readBatteryCapacityLevelNative(): Float
+    external fun setBypassChargingNative(enable: Boolean): Int
+
+    // Sysfs Generic
+    external fun getSystemPropertyNative(key: String): String
+    external fun fileExistsNative(path: String): Boolean
+    external fun readSysfsNative(path: String): String
+    external fun writeSysfsNative(path: String, value: String): Boolean
+
+    // Kotlin wrappers
+    fun detectCpuClusters(): List<ClusterInfo>? {
+        if (!isLoaded) return null
+        return try {
+            val json = detectCpuClustersNative()
+            org.json.JSONArray(json).let { arr ->
+                (0 until arr.length()).map { i ->
+                    val obj = arr.getJSONObject(i)
+                    ClusterInfo(
+                        clusterNumber = obj.getInt("cluster_number"),
+                        cores = (0 until obj.getJSONArray("cores").length()).map { obj.getJSONArray("cores").getInt(it) },
+                        minFreq = obj.getInt("min_freq"),
+                        maxFreq = obj.getInt("max_freq"),
+                        currentMinFreq = obj.getInt("current_min_freq"),
+                        currentMaxFreq = obj.getInt("current_max_freq"),
+                        governor = obj.getString("governor"),
+                        availableGovernors = (0 until obj.getJSONArray("available_governors").length()).map { obj.getJSONArray("available_governors").getString(it) },
+                        policyPath = obj.getString("policy_path"),
+                        availableFrequencies = (0 until obj.getJSONArray("available_frequencies").length()).map { obj.getJSONArray("available_frequencies").getInt(it) }
+                    )
+                }
+            }
+        } catch (e: Exception) { Log.e(TAG, "detectCpuClusters failed: ${e.message}"); null }
+    }
+
+    fun readCoreData(): List<CoreData>? {
+        if (!isLoaded) return null
+        return try {
+            val json = readCoreDataNative()
+            org.json.JSONArray(json).let { arr ->
+                (0 until arr.length()).map { i ->
+                    val obj = arr.getJSONObject(i)
+                    CoreData(
+                        core = obj.getInt("core"),
+                        online = obj.getBoolean("online"),
+                        freq = obj.getInt("freq"),
+                        minFreq = obj.getInt("min_freq"),
+                        maxFreq = obj.getInt("max_freq"),
+                        governor = obj.getString("governor")
+                    )
+                }
+            }
+        } catch (e: Exception) { Log.e(TAG, "readCoreData failed: ${e.message}"); null }
+    }
+
+    fun readCpuLoad(): Float? = if (!isLoaded) null else try { readCpuLoadNative() } catch (e: Exception) { null }
+    fun readCpuTemperature(): Float? = if (!isLoaded) null else try { readCpuTemperatureNative() } catch (e: Exception) { null }
+    fun readCoreTemperature(core: Int): Float? = if (!isLoaded) null else try { readCoreTemperatureNative(core) } catch (e: Exception) { null }
+    fun getCpuModel(): String? = if (!isLoaded) null else try { getCpuModelNative() } catch (e: Exception) { null }
+
+    fun readGpuFreq(): Int? = if (!isLoaded) null else try { readGpuFreqNative() } catch (e: Exception) { null }
+    fun readGpuBusy(): Int? = if (!isLoaded) null else try { readGpuBusyNative() } catch (e: Exception) { null }
+    fun getGpuVendor(): String? = if (!isLoaded) null else try { getGpuVendorNative() } catch (e: Exception) { null }
+    fun getGpuModel(): String? = if (!isLoaded) null else try { getGpuModelNative() } catch (e: Exception) { null }
+    fun getGpuDriverInfo(): String? = if (!isLoaded) null else try { getGpuDriverInfoNative() } catch (e: Exception) { null }
+    fun getSystemProperty(key: String): String? = if (!isLoaded) null else try { getSystemPropertyNative(key) } catch (e: Exception) { null }
+    fun readThermalZones(): List<ThermalZone>? = if (!isLoaded) null else try {
+        val json = readThermalZonesNative()
+        org.json.JSONArray(json).let { arr ->
+            (0 until arr.length()).map { i ->
+                val obj = arr.getJSONObject(i)
+                ThermalZone(name = obj.getString("name"), temp = obj.getDouble("temp").toFloat())
+            }
+        }
+    } catch (e: Exception) { null }
+
+    fun readBatteryLevel(): Int? = if (!isLoaded) null else try { readBatteryLevelNative() } catch (e: Exception) { null }
+    fun readBatteryTemp(): Float? = if (!isLoaded) null else try { readBatteryTempNative() / 10.0f } catch (e: Exception) { null }
+    fun readBatteryVoltage(): Float? = if (!isLoaded) null else try { readBatteryVoltageNative() / 1000.0f } catch (e: Exception) { null }
+    fun readBatteryCurrent(): Int? = if (!isLoaded) null else try { readBatteryCurrentNative() } catch (e: Exception) { null }
+    fun isCharging(): Boolean? = if (!isLoaded) null else try { isChargingNative() == 1 } catch (e: Exception) { null }
+    fun readCycleCount(): Int? = if (!isLoaded) null else try { readCycleCountNative() } catch (e: Exception) { null }
+    fun readBatteryHealth(): String? = if (!isLoaded) null else try { readBatteryHealthNative() } catch (e: Exception) { null }
+    fun readBatteryCapacityLevel(): Float? = if (!isLoaded) null else try { readBatteryCapacityLevelNative() } catch (e: Exception) { null }
+
+    data class ClusterInfo(val clusterNumber: Int, val cores: List<Int>, val minFreq: Int, val maxFreq: Int,
+                           val currentMinFreq: Int, val currentMaxFreq: Int, val governor: String,
+                           val availableGovernors: List<String>, val policyPath: String, val availableFrequencies: List<Int>)
+    data class CoreData(val core: Int, val online: Boolean, val freq: Int, val minFreq: Int, val maxFreq: Int, val governor: String)
+    data class ThermalZone(val name: String, val temp: Float)
+}

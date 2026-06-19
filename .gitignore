@@ -1,0 +1,7 @@
+# Ignore cloned reference repos (training only)
+training/references/
+training/extracted/
+training/log.md
+*.so
+*.apk
+*.zip

@@ -4,7 +4,37 @@
 **Root:** KernelSU
 **Goal:** Reverse engineering 11 source repos → Rust kernel manager library → Android app
 
-## Source References (cloned, gitignored — `training/references/`)
+---
+
+## Commands (untuk Session Baru)
+
+### Resume Progress
+Ketik di session baru:
+```
+Resume plan: lanjut Phase 2 step berikutnya dari training/plan.md
+```
+
+### Check Status
+```
+Status plan: berapa persen progress, file mana yang sudah dipelajari
+```
+
+### Start New Phase
+Setelah Phase 2 selesai:
+```
+Summary: buat feature catalog dari knowledge/modules/ per source
+```
+
+### Implementation
+```
+Implement: bikin CPU governor switching dengan Rust SDK (MVP)
+Implement: tambah GPU renderer switching dari SkiaShift
+Implement: tambah thermal management dari AZenith
+```
+
+---
+
+## Source References (gitignored — `training/references/`)
 
 ### Kernel Managers
 | Repo | Files | Language | Fokus |
@@ -12,13 +42,13 @@
 | Xtra-Kernel-Manager | 451 | Kotlin + **Rust JNI** | High-perf native reader, modern UI |
 | SmartPack-Kernel-Manager | 452 | Java | Battle-tested, comprehensive sysfs |
 | RvKernel-Manager | 118 | Kotlin/Compose | Minimalis, dynamic sysfs probing |
-| ZKM | 443 | Kotlin/Compose | Bus DCVS, GPU discovery, enterprise suite |
+| ZKM | 443 | Kotlin/Compose | Bus DCVS, GPU discovery |
 
 ### Performance & Gaming Modules
 | Repo | Files | Language | Fokus |
 |------|-------|----------|-------|
-| AZenith | 150 (C+) | C + Kotlin | KernelSU module, game detection, thermal core |
-| Encore Tweaks | 242 | C++ + Vue | Profile-style performance tuner, native daemon |
+| AZenith | 150 | C + Kotlin | KernelSU module, game detection, thermal core |
+| Encore Tweaks | 242 | C++ + Vue | Profile-style tuner, native daemon |
 | SkiaShift | 47 | Kotlin + C++ | Per-app GPU renderer (Vulkan/OpenGL) |
 | COPG | 64 | C++ + shell | Zygisk device/CPU spoofing |
 
@@ -27,41 +57,40 @@
 |------|-------|----------|-------|
 | Shizuku | 300 | Java/Kotlin | Root alternative via Binder IPC |
 | Shizuku-API | 119 | Java/Kotlin | Shizuku API interface |
-| DPIS | 788 | Java | Per-app DPI/font scaling (Xposed) |
+| DPIS | 788 | Java | Per-app DPI/font scaling |
+
+---
 
 ## Progress
 
-| Source | Indexed | TODO | Status |
-|--------|---------|------|--------|
-| Xtra-Kernel Rust | 12 | 0 | ✅ DONE |
-| Xtra-Kernel Kotlin | 0 | 16 | ⬜ |
-| SmartPack | 0 | 31 | ⬜ |
-| RvKernel | 0 | 10 | ⬜ |
-| ZKM | 0 | 14 | ⬜ |
-| AZenith | 0 | 19 | ⬜ |
-| Encore Tweaks | 0 | 19 | ⬜ |
-| SkiaShift | 0 | 5 | ⬜ |
-| COPG | 0 | 5 | ⬜ |
-| DPIS | 0 | 10 | ⬜ |
-| Shizuku | 0 | 7 | ⬜ |
-| Shizuku-API | 0 | 7 | ⬜ |
-| **Total** | **14** | **231** | **5.7%** |
+| Source | Core Files | Study Status |
+|--------|------------|-------------|
+| Xtra-Kernel Rust | 12 | ✅ DONE |
+| Xtra-Kernel Kotlin | 16 | ⬜ |
+| Encore Tweaks | 19 | ⬜ |
+| SkiaShift | 5 | ⬜ |
+| DPIS | 10 | ⬜ |
+| SmartPack | 31 | ⬜ |
+| ZKM | 14 | ⬜ |
+| AZenith | 19 | ⬜ |
+| COPG | 5 | ⬜ |
+| Shizuku | 7 | ⬜ |
+| Shizuku-API | 7 | ⬜ |
+| **Total** | **2,115** | **14 (0.7%)** |
 
-## Methodology
-
-1. **Index** — Catalog setiap file dari 11 sources (245 files total)
-2. **Study per-file** — Reverse engineering per-function per-module
-3. **Extract knowledge** → `knowledge/modules/`
-4. **Build Rust SDK** → `rust/kernel-manager/` (Phase 2)
-5. **Android app** → `android/app/` (Phase 3)
+---
 
 ## Knowledge Base
 
 | File | Isi |
 |------|-----|
-| `knowledge/INDEX.md` | Master index — 245 files, 11 sources |
+| `knowledge/INDEX.md` | Master index — 2,115 files, modular per source |
+| `knowledge/index/*.md` | Per-source file index (11 files) |
 | `knowledge/rust-sdk.md` | Rust SDK design template |
 | `knowledge/modules/12-sysfs-rw.md` | JNI bridge + sysfs architecture |
+| `training/plan.md` | Master plan + progress tracker |
+
+---
 
 ## Cross-Reference (POCO X3 NFC)
 
@@ -78,19 +107,34 @@
 | **CPU spoofing** | COPG | Zygisk GOT/PLT hooks |
 | **Thermal** | SmartPack + AZenith | MSM thermal + game mode |
 
+---
+
 ## Files
 
 ```
 farewell-ex/
 ├── README.md
-├── .gitignore                       ← ignores training/references/
+├── .gitignore
 ├── knowledge/
-│   ├── INDEX.md                     ← 245 file entries
-│   ├── rust-sdk.md                  ← Rust SDK design
-│   └── modules/                     ← extracted knowledge per module
+│   ├── INDEX.md                 ← Master index (2,115 files)
+│   ├── index/                   ← Per-source modular indexes (11 files)
+│   │   ├── 01-SmartPack-Kernel-Manager.md
+│   │   ├── 02-Xtra-Kernel-Manager.md
+│   │   ├── 03-RvKernel-Manager.md
+│   │   ├── 04-ZKM.md
+│   │   ├── 05-AZenith.md
+│   │   ├── 06-Encore.md
+│   │   ├── 07-SkiaShift.md
+│   │   ├── 08-COPG.md
+│   │   ├── 09-DPIS.md
+│   │   ├── 10-Shizuku.md
+│   │   └── 11-Shizuku-API.md
+│   ├── rust-sdk.md              ← Rust SDK design
+│   └── modules/                 ← Extracted knowledge per module
 ├── training/
-│   ├── references/                  ← (gitignored) 11 cloned repos
-│   └── log.md                       ← (gitignored) daily training log
-├── rust/kernel-manager/             ← (Phase 2)
-└── android/app/                     ← (Phase 3)
+│   ├── plan.md                  ← Master plan + progress tracker
+│   ├── references/              ← (gitignored) 11 cloned repos
+│   └── log.md                   ← (gitignored) daily training log
+├── rust/kernel-manager/         ← (Phase 2)
+└── android/app/                 ← (Phase 3)
 ```

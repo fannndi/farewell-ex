@@ -261,3 +261,75 @@ pub fn get_available_frequencies(cpu: i32) -> Vec<i32> {
             .map(|hz| (hz / 1000) as i32).collect())
         .unwrap_or_default()
 }
+
+// ==================== Hard Limit (SmartPack) ====================
+
+pub fn set_cpufreq_hardlimit_max(freq_khz: i64) -> bool {
+    let path = "/sys/kernel/cpufreq_hardlimit/scaling_max_freq";
+    if !sysfs::file_exists(path) { return false; }
+    sysfs::chmod(path, "644");
+    let ok = sysfs::write_sysfs(path, &freq_khz.to_string());
+    sysfs::chmod(path, "444"); ok
+}
+
+pub fn set_cpufreq_hardlimit_min(freq_khz: i64) -> bool {
+    let path = "/sys/kernel/cpufreq_hardlimit/scaling_min_freq";
+    if !sysfs::file_exists(path) { return false; }
+    sysfs::chmod(path, "644");
+    let ok = sysfs::write_sysfs(path, &freq_khz.to_string());
+    sysfs::chmod(path, "444"); ok
+}
+
+pub fn set_cpufreq_hardlimit_dvfs_lock(enabled: bool) -> bool {
+    let path = "/sys/kernel/cpufreq_hardlimit/userspace_dvfs_lock";
+    if !sysfs::file_exists(path) { return false; }
+    sysfs::chmod(path, "644");
+    let ok = sysfs::write_sysfs(path, if enabled { "1" } else { "0" });
+    sysfs::chmod(path, "444"); ok
+}
+
+pub fn set_msm_cpufreq_limit(limit: i64) -> bool {
+    let path = "/sys/kernel/msm_cpufreq_limit/cpufreq_limit";
+    if !sysfs::file_exists(path) { return false; }
+    sysfs::chmod(path, "644");
+    let ok = sysfs::write_sysfs(path, &limit.to_string());
+    sysfs::chmod(path, "444"); ok
+}
+
+// ==================== CPU Boost (SmartPack + RvKernel) ====================
+
+pub fn set_input_boost_ms(ms: i32) -> bool {
+    let path = "/sys/devices/system/cpu/cpu_boost/input_boost_ms";
+    if !sysfs::file_exists(path) { return false; }
+    sysfs::chmod(path, "644");
+    let ok = sysfs::write_sysfs(path, &ms.to_string());
+    sysfs::chmod(path, "444"); ok
+}
+
+pub fn set_sched_boost_on_input(boost: bool) -> bool {
+    let path = "/sys/devices/system/cpu/cpu_boost/sched_boost_on_input";
+    if !sysfs::file_exists(path) { return false; }
+    sysfs::chmod(path, "644");
+    let ok = sysfs::write_sysfs(path, if boost { "1" } else { "0" });
+    sysfs::chmod(path, "444"); ok
+}
+
+// ==================== CPU EAS (AZenith) ====================
+
+pub fn set_cpu_eas_enabled(enabled: bool) -> bool {
+    let path = "/sys/devices/system/cpu/eas/enable";
+    if !sysfs::file_exists(path) { return false; }
+    sysfs::chmod(path, "644");
+    let ok = sysfs::write_sysfs(path, if enabled { "1" } else { "0" });
+    sysfs::chmod(path, "444"); ok
+}
+
+// ==================== CPU DCVS Disable (Encore) ====================
+
+pub fn set_cpu_dcvs_disable(core: i32, disable: bool) -> bool {
+    let path = format!("/sys/devices/system/cpu/cpu{}/core_ctrl/cpudcvs_disable", core);
+    if !sysfs::file_exists(&path) { return false; }
+    sysfs::chmod(&path, "644");
+    let ok = sysfs::write_sysfs(&path, if disable { "1" } else { "0" });
+    sysfs::chmod(&path, "444"); ok
+}

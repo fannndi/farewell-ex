@@ -116,3 +116,35 @@ pub fn set_bypass_charging(enable: bool) -> bool {
     }
     false
 }
+
+// ==================== Bypass Charging Auto-Discovery (AZenith) ====================
+
+pub fn discover_bypass_charging_node() -> Option<String> {
+    let candidates = [
+        "/sys/class/power_supply/battery/input_suspend",
+        "/sys/class/qcom-battery/bypass_charging_enable",
+        "/sys/class/power_supply/battery/charging_enabled",
+        "/sys/class/power_supply/bms/charging_enabled",
+        "/sys/class/power_supply/bat/charging_enabled",
+        "/sys/devices/platform/soc:qcom,battery/charging_enabled",
+        "/sys/class/power_supply/usb/charging_enabled",
+        "/sys/class/power_supply/dc/charging_enabled",
+        "/sys/class/power_supply/battery/constant_charge_current_max",
+        "/sys/class/qcom-battery/restricted_current",
+    ];
+    for path in &candidates {
+        if sysfs::file_exists(path) {
+            sysfs::chmod(path, "644");
+            if sysfs::write_sysfs(path, "1") {
+                // Verify: read current_now, if drops → working node
+                std::thread::sleep(std::time::Duration::from_millis(500));
+                let current = read_battery_current_ma();
+                if current.abs() < 1000 {
+                    return Some(path.to_string());
+                }
+                sysfs::write_sysfs(path, "0");
+            }
+        }
+    }
+    None
+}

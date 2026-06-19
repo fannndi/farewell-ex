@@ -1,10 +1,8 @@
 use crate::sysfs;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ThermalZone { pub name: String, pub temp: f32 }
-
-use serde::Deserialize;
 
 pub fn read_cpu_temperature() -> f32 {
     for zone in 0..10 {
@@ -59,4 +57,60 @@ pub fn set_thermal_sconfig(preset: &str) -> bool {
     let ok = sysfs::write_sysfs(path, value);
     sysfs::chmod(path, "444");
     ok
+}
+
+// ==================== MSM Thermal (SmartPack) ====================
+
+pub fn set_msm_thermal_enabled(enabled: bool) -> bool {
+    let val = if enabled { "Y" } else { "N" };
+    let paths = [
+        "/sys/module/msm_thermal/parameters/enabled",
+        "/sys/module/msm_thermal_v2/parameters/enabled",
+        "/sys/module/simple_msm_thermal/parameters/enabled",
+    ];
+    let mut ok = false;
+    for path in &paths {
+        if sysfs::file_exists(path) {
+            sysfs::chmod(path, "644");
+            if sysfs::write_sysfs(path, val) { ok = true; }
+            sysfs::chmod(path, "444");
+        }
+    }
+    ok
+}
+
+// ==================== EARA Thermal (Encore + ZKM + AZenith) ====================
+
+pub fn set_eara_thermal_enabled(enabled: bool) -> bool {
+    let path = "/sys/kernel/eara_thermal/enable";
+    if !sysfs::file_exists(path) { return false; }
+    sysfs::chmod(path, "644");
+    let ok = sysfs::write_sysfs(path, if enabled { "1" } else { "0" });
+    sysfs::chmod(path, "444"); ok
+}
+
+pub fn set_eara_fake_throttle(enabled: bool) -> bool {
+    let path = "/sys/kernel/eara_thermal/fake_throttle";
+    if !sysfs::file_exists(path) { return false; }
+    sysfs::chmod(path, "644");
+    let ok = sysfs::write_sysfs(path, if enabled { "1" } else { "0" });
+    sysfs::chmod(path, "444"); ok
+}
+
+// ==================== FPSGO (Encore + ZKM) ====================
+
+pub fn set_fpsgo_enabled(enabled: bool) -> bool {
+    let path = "/sys/kernel/fpsgo/common/fpsgo_enable";
+    if !sysfs::file_exists(path) { return false; }
+    sysfs::chmod(path, "644");
+    let ok = sysfs::write_sysfs(path, if enabled { "1" } else { "0" });
+    sysfs::chmod(path, "444"); ok
+}
+
+pub fn set_fpsgo_force(enabled: bool) -> bool {
+    let path = "/sys/kernel/fpsgo/common/force_onoff";
+    if !sysfs::file_exists(path) { return false; }
+    sysfs::chmod(path, "644");
+    let ok = sysfs::write_sysfs(path, if enabled { "1" } else { "0" });
+    sysfs::chmod(path, "444"); ok
 }

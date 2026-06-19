@@ -76,6 +76,59 @@ object NativeLib {
     external fun readSysfsNative(path: String): String
     external fun writeSysfsNative(path: String, value: String): Boolean
 
+    // GPU Enhancements
+    external fun setGpuBusSplitNative(enabled: Boolean): Int
+    external fun setGpuThrottlingNative(enabled: Boolean): Int
+    external fun setGpuIdleTimerNative(ms: Int): Int
+    external fun setGpuMaxGpuclkNative(hz: Long): Int
+    external fun setGpuDevfreqGovernorNative(governor: String): Int
+    external fun setAdrenoIdlerActiveNative(active: Boolean): Int
+    external fun setAdrenoIdlerIdlewaitNative(ms: Int): Int
+    external fun setAdrenoIdlerDowndifferentialNative(pct: Int): Int
+    external fun setAdrenoIdlerIdleworkloadNative(value: Int): Int
+    external fun setSimpleGpuActivateNative(active: Boolean): Int
+    external fun setSimpleGpuLazinessNative(value: Int): Int
+    external fun setSimpleGpuRampThresholdNative(value: Int): Int
+    external fun hasBusDcvsNative(): Int
+    external fun setBusDcvsFreqNative(busName: String, min: Int, max: Int): Int
+
+    // Scheduler + VM
+    external fun setStunePreferIdleNative(prefer: Boolean): Int
+    external fun setStuneBoostNative(boost: Int): Int
+    external fun setVfsCachePressureNative(pct: Int): Int
+    external fun setSplitLockMitigateNative(enabled: Boolean): Int
+    external fun setSchedBoreNative(enabled: Boolean): Int
+    external fun setSchedUtilClampMinNative(value: Int): Int
+    external fun setSchedUtilClampMaxNative(value: Int): Int
+    external fun dropCachesNative(): Int
+
+    // I/O
+    external fun setIoSchedulerNative(device: String, scheduler: String): Int
+    external fun setIoReadaheadNative(device: String, kb: Int): Int
+    external fun setIoNrRequestsNative(device: String, nr: Int): Int
+
+    // Network
+    external fun setTcpCongestionNative(algo: String): Int
+    external fun getKernelVersionNative(): String
+
+    // CPU Enhancements
+    external fun setInputBoostMsNative(ms: Int): Int
+    external fun setSchedBoostOnInputNative(boost: Boolean): Int
+    external fun setCpuEasEnabledNative(enabled: Boolean): Int
+    external fun setCpuDcvsDisableNative(core: Int, disable: Boolean): Int
+
+    // Thermal Enhancements
+    external fun setMsmThermalEnabledNative(enabled: Boolean): Int
+    external fun setEarathEnabledNative(enabled: Boolean): Int
+    external fun setFpsgoEnabledNative(enabled: Boolean): Int
+
+    // Power Enhancements
+    external fun discoverBypassChargingNodeNative(): String
+
+    // Memory Enhancements
+    external fun zramSetAlgorithmNative(device: Int, algo: String): Int
+    external fun zramSetSizeNative(device: Int, size: Long): Int
+
     // Kotlin wrappers
     fun detectCpuClusters(): List<ClusterInfo>? {
         if (!isLoaded) return null

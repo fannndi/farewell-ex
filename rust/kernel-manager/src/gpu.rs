@@ -221,3 +221,146 @@ pub fn set_gpu_freq_limit(min_mhz: i32, max_mhz: i32) -> bool {
     let r2 = sysfs::write_sysfs(&max_path, &format!("{}", max_mhz * 1_000_000));
     r1 && r2
 }
+
+// ==================== GPU Force Params (Encore) ====================
+
+pub fn set_gpu_bus_split(enabled: bool) -> bool {
+    let path = "/sys/class/kgsl/kgsl-3d0/bus_split";
+    sysfs::chmod(path, "644");
+    let ok = sysfs::write_sysfs(path, if enabled { "1" } else { "0" });
+    sysfs::chmod(path, "444"); ok
+}
+
+pub fn set_gpu_throttling(enabled: bool) -> bool {
+    let path = "/sys/class/kgsl/kgsl-3d0/throttling";
+    sysfs::chmod(path, "644");
+    let ok = sysfs::write_sysfs(path, if enabled { "1" } else { "0" });
+    sysfs::chmod(path, "444"); ok
+}
+
+pub fn set_gpu_idle_timer(ms: i32) -> bool {
+    let path = "/sys/class/kgsl/kgsl-3d0/idle_timer";
+    sysfs::chmod(path, "644");
+    let ok = sysfs::write_sysfs(path, &ms.to_string());
+    sysfs::chmod(path, "444"); ok
+}
+
+pub fn set_gpu_max_gpuclk(hz: i64) -> bool {
+    let path = "/sys/class/kgsl/kgsl-3d0/max_gpuclk";
+    sysfs::chmod(path, "644");
+    let ok = sysfs::write_sysfs(path, &hz.to_string());
+    sysfs::chmod(path, "444"); ok
+}
+
+pub fn set_gpu_devfreq_governor(governor: &str) -> bool {
+    let path = "/sys/class/kgsl/kgsl-3d0/devfreq/governor";
+    sysfs::chmod(path, "644");
+    let ok = sysfs::write_sysfs(path, governor);
+    sysfs::chmod(path, "444"); ok
+}
+
+// ==================== Adreno Idler (ZKM) ====================
+
+pub fn set_adreno_idler_active(active: bool) -> bool {
+    let path = "/sys/module/adreno_idler/parameters/adreno_idler_active";
+    sysfs::chmod(path, "644");
+    let ok = sysfs::write_sysfs(path, if active { "Y" } else { "N" });
+    sysfs::chmod(path, "444"); ok
+}
+
+pub fn set_adreno_idler_idlewait(ms: i32) -> bool {
+    let path = "/sys/module/adreno_idler/parameters/adreno_idler_idlewait";
+    sysfs::chmod(path, "644");
+    let ok = sysfs::write_sysfs(path, &ms.to_string());
+    sysfs::chmod(path, "444"); ok
+}
+
+pub fn set_adreno_idler_downdifferential(pct: i32) -> bool {
+    let path = "/sys/module/adreno_idler/parameters/adreno_idler_downdifferential";
+    sysfs::chmod(path, "644");
+    let ok = sysfs::write_sysfs(path, &pct.to_string());
+    sysfs::chmod(path, "444"); ok
+}
+
+pub fn set_adreno_idler_idleworkload(val: i32) -> bool {
+    let path = "/sys/module/adreno_idler/parameters/adreno_idler_idleworkload";
+    sysfs::chmod(path, "644");
+    let ok = sysfs::write_sysfs(path, &val.to_string());
+    sysfs::chmod(path, "444"); ok
+}
+
+// ==================== Simple GPU Algorithm (ZKM) ====================
+
+pub fn set_simple_gpu_activate(active: bool) -> bool {
+    let path = "/sys/module/simple_gpu_algorithm/parameters/simple_gpu_activate";
+    sysfs::chmod(path, "644");
+    let ok = sysfs::write_sysfs(path, if active { "Y" } else { "N" });
+    sysfs::chmod(path, "444"); ok
+}
+
+pub fn set_simple_gpu_laziness(val: i32) -> bool {
+    let path = "/sys/module/simple_gpu_algorithm/parameters/simple_laziness";
+    sysfs::chmod(path, "644");
+    let ok = sysfs::write_sysfs(path, &val.to_string());
+    sysfs::chmod(path, "444"); ok
+}
+
+pub fn set_simple_gpu_ramp_threshold(val: i32) -> bool {
+    let path = "/sys/module/simple_gpu_algorithm/parameters/simple_ramp_threshold";
+    sysfs::chmod(path, "644");
+    let ok = sysfs::write_sysfs(path, &val.to_string());
+    sysfs::chmod(path, "444"); ok
+}
+
+// ==================== Bus DCVS (ZKM) ====================
+
+pub fn has_bus_dcvs() -> bool {
+    sysfs::file_exists("/sys/devices/system/cpu/bus_dcvs")
+}
+
+pub fn get_bus_dcvs_components() -> Vec<String> {
+    let base = "/sys/devices/system/cpu/bus_dcvs";
+    let mut components = Vec::new();
+    if let Some(content) = sysfs::read_sysfs_cached(
+        &format!("{}/{}", base, "list"), 0) {
+        components = content.split_whitespace().map(|s| s.to_string()).collect();
+    }
+    if components.is_empty() {
+        // Fallback: try reading subdirs via shell
+        for name in &["LLCC", "DDR", "GPU", "CPU"] {
+            if sysfs::file_exists(&format!("{}/{}", base, name)) {
+                components.push(name.to_string());
+            }
+        }
+    }
+    components
+}
+
+pub fn get_bus_dcvs_freq(bus_name: &str) -> Vec<i32> {
+    let base = "/sys/devices/system/cpu/bus_dcvs";
+    let paths = [
+        format!("{}/{}/available_frequencies", base, bus_name),
+        format!("{}/{}/0/available_frequencies", base, bus_name),
+    ];
+    for path in &paths {
+        if let Some(content) = sysfs::read_sysfs_cached(path, 0) {
+            let freqs: Vec<i32> = content.split_whitespace().filter_map(|s| s.parse::<i64>().ok())
+                .map(|hz| (hz / 1000) as i32).collect();
+            if !freqs.is_empty() { return freqs; }
+        }
+    }
+    vec![]
+}
+
+pub fn set_bus_dcvs_freq(bus_name: &str, min_freq: i32, max_freq: i32) -> bool {
+    let base = "/sys/devices/system/cpu/bus_dcvs";
+    let min_path = format!("{}/{}/min_freq", base, bus_name);
+    let max_path = format!("{}/{}/max_freq", base, bus_name);
+    // Brute-force boundary: expand min to absolute min first
+    sysfs::chmod(&min_path, "644");
+    sysfs::chmod(&max_path, "644");
+    sysfs::write_sysfs(&min_path, "0");
+    let r1 = sysfs::write_sysfs(&max_path, &format!("{}", max_freq * 1000));
+    let r2 = sysfs::write_sysfs(&min_path, &format!("{}", min_freq * 1000));
+    r1 && r2
+}

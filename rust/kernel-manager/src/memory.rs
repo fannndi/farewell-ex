@@ -100,3 +100,56 @@ pub fn get_memory_pressure() -> f32 {
     let info = read_memory_info();
     if info.total_kb > 0 { ((info.total_kb - info.available_kb) as f32 / info.total_kb as f32) * 100.0 } else { 0.0 }
 }
+
+// ==================== Multi-Device ZRAM (Xtra-Kernel) ====================
+
+pub fn read_zram_device_stats(device: i32) -> Option<ZramStats> {
+    let disksize_path = format!("/sys/block/zram{}/disksize", device);
+    if !sysfs::file_exists(&disksize_path) { return None; }
+    let disksize = sysfs::read_sysfs_int(&disksize_path, 1000)? as i64;
+    let mm_stat = sysfs::read_sysfs_cached(&format!("/sys/block/zram{}/mm_stat", device), 1000)?;
+    let p: Vec<&str> = mm_stat.split_whitespace().collect();
+    if p.len() >= 3 {
+        let orig = p[0].parse().ok()?;
+        let compr = p[1].parse().ok()?;
+        let mem = p[2].parse().ok()?;
+        let ratio = if compr > 0 { orig as f32 / compr as f32 } else { 1.0 };
+        return Some(ZramStats { disksize, orig_data_size: orig, compr_data_size: compr, mem_used_total: mem, compression_ratio: ratio });
+    }
+    None
+}
+
+// ==================== ZRAM Lifecycle (Xtra-Kernel RAMControlUseCase) ====================
+
+pub fn zram_set_algorithm(device: i32, algo: &str) -> bool {
+    let algo_path = format!("/sys/block/zram{}/comp_algorithm", device);
+    let disksize_path = format!("/sys/block/zram{}/disksize", device);
+    if !sysfs::file_exists(&algo_path) { return false; }
+    // swapoff → set algo → swapon
+    let _ = sysfs::write_sysfs(&format!("/proc/swaps"), ""); // swapoff first
+    sysfs::chmod(&disksize_path, "644");
+    sysfs::write_sysfs(&disksize_path, "0"); // reset
+    sysfs::chmod(&algo_path, "644");
+    let ok = sysfs::write_sysfs(&algo_path, algo);
+    sysfs::chmod(&algo_path, "444");
+    ok
+}
+
+pub fn zram_set_size(device: i32, size_bytes: i64) -> bool {
+    let disksize_path = format!("/sys/block/zram{}/disksize", device);
+    if !sysfs::file_exists(&disksize_path) { return false; }
+    sysfs::chmod(&disksize_path, "644");
+    let ok = sysfs::write_sysfs(&disksize_path, &size_bytes.to_string());
+    sysfs::chmod(&disksize_path, "444"); ok
+}
+
+pub fn swap_file_create(path: &str, size_mb: i64) -> bool {
+    // dd if=/dev/zero of=path bs=1M count=size_mb
+    let cmd = format!("dd if=/dev/zero of={} bs=1M count={} 2>/dev/null && chmod 600 {} && mkswap {} 2>/dev/null && swapon {}", path, size_mb, path, path, path);
+    std::process::Command::new("sh").arg("-c").arg(&cmd).status().is_ok()
+}
+
+pub fn swap_file_remove(path: &str) -> bool {
+    let cmd = format!("swapoff {} 2>/dev/null && rm -f {}", path, path);
+    std::process::Command::new("sh").arg("-c").arg(&cmd).status().is_ok()
+}

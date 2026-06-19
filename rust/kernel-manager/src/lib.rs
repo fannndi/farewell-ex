@@ -4,6 +4,11 @@ mod gpu;
 mod memory;
 mod thermal;
 mod power;
+mod scheduler;
+mod io;
+mod network;
+mod display;
+mod wake;
 
 use jni::objects::{JClass, JString};
 use jni::sys::{jfloat, jint, jlong, jstring};
@@ -53,8 +58,8 @@ pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_getCpuMo
 }
 
 #[unsafe(no_mangle)]
-pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setGovernorNative(_env: JNIEnv, _class: JClass, governor: JString) -> jint {
-    let gov: String = _env.get_string(&governor).map(|s| s.into()).unwrap_or_default();
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setGovernorNative(env: JNIEnv, _class: JClass, governor: JString) -> jint {
+    let gov: String = env.get_string(&governor).map(|s| s.into()).unwrap_or_default();
     if cpu::set_governor(&gov) { 1 } else { 0 }
 }
 
@@ -263,4 +268,213 @@ pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_writeSys
     let p: String = env.get_string(&path).map(|s| s.into()).unwrap_or_default();
     let v: String = env.get_string(&value).map(|s| s.into()).unwrap_or_default();
     if sysfs::write_sysfs(&p, &v) { 1 } else { 0 }
+}
+
+// ==================== GPU ENHANCEMENTS ====================
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setGpuBusSplitNative(_env: JNIEnv, _class: JClass, enabled: jint) -> jint {
+    if gpu::set_gpu_bus_split(enabled != 0) { 1 } else { 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setGpuThrottlingNative(_env: JNIEnv, _class: JClass, enabled: jint) -> jint {
+    if gpu::set_gpu_throttling(enabled != 0) { 1 } else { 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setGpuIdleTimerNative(_env: JNIEnv, _class: JClass, ms: jint) -> jint {
+    if gpu::set_gpu_idle_timer(ms) { 1 } else { 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setGpuMaxGpuclkNative(_env: JNIEnv, _class: JClass, hz: jlong) -> jint {
+    if gpu::set_gpu_max_gpuclk(hz) { 1 } else { 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setGpuDevfreqGovernorNative(env: JNIEnv, _class: JClass, governor: JString) -> jint {
+    let g: String = env.get_string(&governor).map(|s| s.into()).unwrap_or_default();
+    if gpu::set_gpu_devfreq_governor(&g) { 1 } else { 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setAdrenoIdlerActiveNative(_env: JNIEnv, _class: JClass, active: jint) -> jint {
+    if gpu::set_adreno_idler_active(active != 0) { 1 } else { 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setAdrenoIdlerIdlewaitNative(_env: JNIEnv, _class: JClass, ms: jint) -> jint {
+    if gpu::set_adreno_idler_idlewait(ms) { 1 } else { 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setAdrenoIdlerDowndifferentialNative(_env: JNIEnv, _class: JClass, pct: jint) -> jint {
+    if gpu::set_adreno_idler_downdifferential(pct) { 1 } else { 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setAdrenoIdlerIdleworkloadNative(_env: JNIEnv, _class: JClass, val: jint) -> jint {
+    if gpu::set_adreno_idler_idleworkload(val) { 1 } else { 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setSimpleGpuActivateNative(_env: JNIEnv, _class: JClass, active: jint) -> jint {
+    if gpu::set_simple_gpu_activate(active != 0) { 1 } else { 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setSimpleGpuLazinessNative(_env: JNIEnv, _class: JClass, val: jint) -> jint {
+    if gpu::set_simple_gpu_laziness(val) { 1 } else { 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setSimpleGpuRampThresholdNative(_env: JNIEnv, _class: JClass, val: jint) -> jint {
+    if gpu::set_simple_gpu_ramp_threshold(val) { 1 } else { 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_hasBusDcvsNative(_env: JNIEnv, _class: JClass) -> jint {
+    if gpu::has_bus_dcvs() { 1 } else { 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setBusDcvsFreqNative(env: JNIEnv, _class: JClass, bus_name: JString, min: jint, max: jint) -> jint {
+    let b: String = env.get_string(&bus_name).map(|s| s.into()).unwrap_or_default();
+    if gpu::set_bus_dcvs_freq(&b, min, max) { 1 } else { 0 }
+}
+
+// ==================== SCHEDULER + VM ====================
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setStunePreferIdleNative(_env: JNIEnv, _class: JClass, prefer: jint) -> jint {
+    if scheduler::set_stune_prefer_idle(prefer != 0) { 1 } else { 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setStuneBoostNative(_env: JNIEnv, _class: JClass, boost: jint) -> jint {
+    if scheduler::set_stune_boost(boost) { 1 } else { 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setVfsCachePressureNative(_env: JNIEnv, _class: JClass, pct: jint) -> jint {
+    if scheduler::set_vfs_cache_pressure(pct) { 1 } else { 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setSplitLockMitigateNative(_env: JNIEnv, _class: JClass, enabled: jint) -> jint {
+    if scheduler::set_split_lock_mitigate(enabled != 0) { 1 } else { 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setSchedBoreNative(_env: JNIEnv, _class: JClass, enabled: jint) -> jint {
+    if scheduler::set_sched_bore(enabled != 0) { 1 } else { 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setSchedUtilClampMinNative(_env: JNIEnv, _class: JClass, val: jint) -> jint {
+    if scheduler::set_sched_util_clamp_min(val) { 1 } else { 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setSchedUtilClampMaxNative(_env: JNIEnv, _class: JClass, val: jint) -> jint {
+    if scheduler::set_sched_util_clamp_max(val) { 1 } else { 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_dropCachesNative(_env: JNIEnv, _class: JClass) -> jint {
+    if scheduler::drop_caches() { 1 } else { 0 }
+}
+
+// ==================== I/O ====================
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setIoSchedulerNative(env: JNIEnv, _class: JClass, device: JString, scheduler: JString) -> jint {
+    let d: String = env.get_string(&device).map(|s| s.into()).unwrap_or_default();
+    let s: String = env.get_string(&scheduler).map(|s| s.into()).unwrap_or_default();
+    if io::set_io_scheduler(&d, &s) { 1 } else { 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setIoReadaheadNative(env: JNIEnv, _class: JClass, device: JString, kb: jint) -> jint {
+    let d: String = env.get_string(&device).map(|s| s.into()).unwrap_or_default();
+    if io::set_io_readahead_kb(&d, kb) { 1 } else { 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setIoNrRequestsNative(env: JNIEnv, _class: JClass, device: JString, nr: jint) -> jint {
+    let d: String = env.get_string(&device).map(|s| s.into()).unwrap_or_default();
+    if io::set_io_nr_requests(&d, nr) { 1 } else { 0 }
+}
+
+// ==================== NETWORK ====================
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setTcpCongestionNative(env: JNIEnv, _class: JClass, algo: JString) -> jint {
+    let a: String = env.get_string(&algo).map(|s| s.into()).unwrap_or_default();
+    if network::set_tcp_congestion(&a) { 1 } else { 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_getKernelVersionNative(env: JNIEnv, _class: JClass) -> jstring {
+    create_jstring_safe(&env, network::get_kernel_version())
+}
+
+// ==================== CPU ENHANCEMENTS ====================
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setInputBoostMsNative(_env: JNIEnv, _class: JClass, ms: jint) -> jint {
+    if cpu::set_input_boost_ms(ms) { 1 } else { 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setSchedBoostOnInputNative(_env: JNIEnv, _class: JClass, boost: jint) -> jint {
+    if cpu::set_sched_boost_on_input(boost != 0) { 1 } else { 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setCpuEasEnabledNative(_env: JNIEnv, _class: JClass, enabled: jint) -> jint {
+    if cpu::set_cpu_eas_enabled(enabled != 0) { 1 } else { 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setCpuDcvsDisableNative(_env: JNIEnv, _class: JClass, core: jint, disable: jint) -> jint {
+    if cpu::set_cpu_dcvs_disable(core, disable != 0) { 1 } else { 0 }
+}
+
+// ==================== THERMAL ENHANCEMENTS ====================
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setMsmThermalEnabledNative(_env: JNIEnv, _class: JClass, enabled: jint) -> jint {
+    if thermal::set_msm_thermal_enabled(enabled != 0) { 1 } else { 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setEarathEnabledNative(_env: JNIEnv, _class: JClass, enabled: jint) -> jint {
+    if thermal::set_eara_thermal_enabled(enabled != 0) { 1 } else { 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setFpsgoEnabledNative(_env: JNIEnv, _class: JClass, enabled: jint) -> jint {
+    if thermal::set_fpsgo_enabled(enabled != 0) { 1 } else { 0 }
+}
+
+// ==================== POWER ENHANCEMENTS ====================
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_discoverBypassChargingNodeNative(env: JNIEnv, _class: JClass) -> jstring {
+    create_jstring_safe(&env, power::discover_bypass_charging_node().unwrap_or_default())
+}
+
+// ==================== MEMORY ENHANCEMENTS ====================
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_zramSetAlgorithmNative(env: JNIEnv, _class: JClass, device: jint, algo: JString) -> jint {
+    let a: String = env.get_string(&algo).map(|s| s.into()).unwrap_or_default();
+    if memory::zram_set_algorithm(device, &a) { 1 } else { 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_zramSetSizeNative(_env: JNIEnv, _class: JClass, device: jint, size: jlong) -> jint {
+    if memory::zram_set_size(device, size) { 1 } else { 0 }
 }

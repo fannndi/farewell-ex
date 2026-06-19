@@ -129,6 +129,30 @@ object NativeLib {
     external fun zramSetAlgorithmNative(device: Int, algo: String): Int
     external fun zramSetSizeNative(device: Int, size: Long): Int
 
+    // Renderer (SkiaShift resetprop)
+    external fun setRendererNative(mode: String): Int
+    external fun getCurrentRendererNative(): String
+    external fun isVulkanEnabledNative(): Int
+    external fun restartSurfaceflingerNative(): Int
+
+    // Spoof (COPG resetprop + mount)
+    external fun spoofDevicePropertyNative(key: String, value: String): Int
+    external fun restoreDevicePropertyNative(key: String): Int
+    external fun restoreAllSpoofsNative(): Int
+    external fun mountCpuinfoSpoofNative(): Int
+    external fun unmountCpuinfoSpoofNative(): Int
+    external fun isCpuinfoSpoofedNative(): Int
+    external fun applyDeviceProfileNative(profile: String): Int
+
+    // Display Control (DPIS wm density)
+    external fun setGlobalDensityNative(dpi: Int): Int
+    external fun resetGlobalDensityNative(): Int
+    external fun getCurrentDensityNative(): Int
+    external fun setGlobalFontScaleNative(scale: Float): Int
+    external fun getCurrentFontScaleNative(): Float
+    external fun applyDensityPresetNative(preset: String): Int
+    external fun applyFontPresetNative(preset: String): Int
+
     // Kotlin wrappers
     fun detectCpuClusters(): List<ClusterInfo>? {
         if (!isLoaded) return null

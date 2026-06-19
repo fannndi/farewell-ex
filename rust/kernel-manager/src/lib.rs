@@ -9,6 +9,9 @@ mod io;
 mod network;
 mod display;
 mod wake;
+mod renderer;
+mod spoof;
+mod display_control;
 
 use jni::objects::{JClass, JString};
 use jni::sys::{jfloat, jint, jlong, jstring};
@@ -477,4 +480,107 @@ pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_zramSetA
 #[unsafe(no_mangle)]
 pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_zramSetSizeNative(_env: JNIEnv, _class: JClass, device: jint, size: jlong) -> jint {
     if memory::zram_set_size(device, size) { 1 } else { 0 }
+}
+
+// ==================== RENDERER (SkiaShift resetprop) ====================
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setRendererNative(env: JNIEnv, _class: JClass, mode: JString) -> jint {
+    let m: String = env.get_string(&mode).map(|s| s.into()).unwrap_or_default();
+    if renderer::set_renderer(&m) { 1 } else { 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_getCurrentRendererNative(env: JNIEnv, _class: JClass) -> jstring {
+    create_jstring_safe(&env, renderer::get_current_renderer())
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_isVulkanEnabledNative(_env: JNIEnv, _class: JClass) -> jint {
+    if renderer::is_vulkan_enabled() { 1 } else { 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_restartSurfaceflingerNative(_env: JNIEnv, _class: JClass) -> jint {
+    if renderer::restart_surfaceflinger() { 1 } else { 0 }
+}
+
+// ==================== SPOOF (COPG resetprop + mount) ====================
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_spoofDevicePropertyNative(env: JNIEnv, _class: JClass, key: JString, value: JString) -> jint {
+    let k: String = env.get_string(&key).map(|s| s.into()).unwrap_or_default();
+    let v: String = env.get_string(&value).map(|s| s.into()).unwrap_or_default();
+    if spoof::spoof_device_property(&k, &v) { 1 } else { 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_restoreDevicePropertyNative(env: JNIEnv, _class: JClass, key: JString) -> jint {
+    let k: String = env.get_string(&key).map(|s| s.into()).unwrap_or_default();
+    if spoof::restore_device_property(&k) { 1 } else { 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_restoreAllSpoofsNative(_env: JNIEnv, _class: JClass) -> jint {
+    if spoof::restore_all_spoofs() { 1 } else { 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_mountCpuinfoSpoofNative(_env: JNIEnv, _class: JClass) -> jint {
+    if spoof::mount_cpuinfo_spoof() { 1 } else { 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_unmountCpuinfoSpoofNative(_env: JNIEnv, _class: JClass) -> jint {
+    if spoof::unmount_cpuinfo_spoof() { 1 } else { 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_isCpuinfoSpoofedNative(_env: JNIEnv, _class: JClass) -> jint {
+    if spoof::is_cpuinfo_spoofed() { 1 } else { 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_applyDeviceProfileNative(env: JNIEnv, _class: JClass, profile: JString) -> jint {
+    let p: String = env.get_string(&profile).map(|s| s.into()).unwrap_or_default();
+    if spoof::apply_device_profile(&p) { 1 } else { 0 }
+}
+
+// ==================== DISPLAY CONTROL (DPIS wm density) ====================
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setGlobalDensityNative(_env: JNIEnv, _class: JClass, dpi: jint) -> jint {
+    if display_control::set_global_density(dpi) { 1 } else { 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_resetGlobalDensityNative(_env: JNIEnv, _class: JClass) -> jint {
+    if display_control::reset_global_density() { 1 } else { 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_getCurrentDensityNative(_env: JNIEnv, _class: JClass) -> jint {
+    display_control::get_current_density()
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setGlobalFontScaleNative(_env: JNIEnv, _class: JClass, scale: jfloat) -> jint {
+    if display_control::set_global_font_scale(scale) { 1 } else { 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_getCurrentFontScaleNative(_env: JNIEnv, _class: JClass) -> jfloat {
+    display_control::get_current_font_scale()
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_applyDensityPresetNative(env: JNIEnv, _class: JClass, preset: JString) -> jint {
+    let p: String = env.get_string(&preset).map(|s| s.into()).unwrap_or_default();
+    if display_control::apply_density_preset(&p) { 1 } else { 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_applyFontPresetNative(env: JNIEnv, _class: JClass, preset: JString) -> jint {
+    let p: String = env.get_string(&preset).map(|s| s.into()).unwrap_or_default();
+    if display_control::apply_font_preset(&p) { 1 } else { 0 }
 }

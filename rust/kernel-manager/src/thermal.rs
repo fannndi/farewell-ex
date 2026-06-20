@@ -53,7 +53,7 @@ pub fn set_thermal_sconfig(preset: &str) -> bool {
         "cool" => "20",
         _ => "11",
     };
-    sysfs::chmod(path, "666");
+    sysfs::chmod(path, "644");
     let ok = sysfs::write_sysfs(path, value);
     sysfs::chmod(path, "444");
     ok

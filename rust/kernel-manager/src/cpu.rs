@@ -242,9 +242,11 @@ pub fn set_freq_limit(core: i32, min: i32, max: i32) -> bool {
 }
 
 pub fn set_core_online(core: i32, online: bool) -> bool {
+    if core == 0 { return false; } // cpu0 cannot be offlined
     let path = format!("/sys/devices/system/cpu/cpu{}/online", core);
     sysfs::chmod(&path, "644");
-    sysfs::write_sysfs(&path, if online { "1" } else { "0" })
+    let ok = sysfs::write_sysfs(&path, if online { "1" } else { "0" });
+    sysfs::chmod(&path, "444"); ok
 }
 
 pub fn get_available_governors(cpu: i32) -> Vec<String> {

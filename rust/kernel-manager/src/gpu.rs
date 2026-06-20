@@ -8,6 +8,8 @@ static LAST_GPU_BUSY: Lazy<Mutex<Option<GpuBusyStats>>> = Lazy::new(|| Mutex::ne
 
 pub fn get_gpu_model() -> String { GPU_MODEL.get_or_init(detect_adreno_model).clone() }
 
+pub fn get_gpu_vendor() -> String { "Qualcomm".to_string() }
+
 fn detect_adreno_model() -> String {
     for path in &["/sys/class/kgsl/kgsl-3d0/gpu_model", "/sys/class/kgsl/kgsl-3d0/devfreq/gpu_model"] {
         if let Some(model) = sysfs::read_sysfs_cached(path, 0) {
@@ -149,21 +151,25 @@ pub fn set_gpu_devfreq_governor(governor: &str) -> bool {
 
 pub fn set_adreno_idler_active(active: bool) -> bool {
     let path = "/sys/module/adreno_idler/parameters/adreno_idler_active";
+    if !sysfs::file_exists(path) { return false; }
     sysfs::chmod(path, "644"); let ok = sysfs::write_sysfs(path, if active { "Y" } else { "N" }); sysfs::chmod(path, "444"); ok
 }
 
 pub fn set_adreno_idler_idlewait(ms: i32) -> bool {
     let path = "/sys/module/adreno_idler/parameters/adreno_idler_idlewait";
+    if !sysfs::file_exists(path) { return false; }
     sysfs::chmod(path, "644"); let ok = sysfs::write_sysfs(path, &ms.to_string()); sysfs::chmod(path, "444"); ok
 }
 
 pub fn set_adreno_idler_downdifferential(pct: i32) -> bool {
     let path = "/sys/module/adreno_idler/parameters/adreno_idler_downdifferential";
+    if !sysfs::file_exists(path) { return false; }
     sysfs::chmod(path, "644"); let ok = sysfs::write_sysfs(path, &pct.to_string()); sysfs::chmod(path, "444"); ok
 }
 
 pub fn set_adreno_idler_idleworkload(val: i32) -> bool {
     let path = "/sys/module/adreno_idler/parameters/adreno_idler_idleworkload";
+    if !sysfs::file_exists(path) { return false; }
     sysfs::chmod(path, "644"); let ok = sysfs::write_sysfs(path, &val.to_string()); sysfs::chmod(path, "444"); ok
 }
 
@@ -171,16 +177,19 @@ pub fn set_adreno_idler_idleworkload(val: i32) -> bool {
 
 pub fn set_simple_gpu_activate(active: bool) -> bool {
     let path = "/sys/module/simple_gpu_algorithm/parameters/simple_gpu_activate";
+    if !sysfs::file_exists(path) { return false; }
     sysfs::chmod(path, "644"); let ok = sysfs::write_sysfs(path, if active { "Y" } else { "N" }); sysfs::chmod(path, "444"); ok
 }
 
 pub fn set_simple_gpu_laziness(val: i32) -> bool {
     let path = "/sys/module/simple_gpu_algorithm/parameters/simple_laziness";
+    if !sysfs::file_exists(path) { return false; }
     sysfs::chmod(path, "644"); let ok = sysfs::write_sysfs(path, &val.to_string()); sysfs::chmod(path, "444"); ok
 }
 
 pub fn set_simple_gpu_ramp_threshold(val: i32) -> bool {
     let path = "/sys/module/simple_gpu_algorithm/parameters/simple_ramp_threshold";
+    if !sysfs::file_exists(path) { return false; }
     sysfs::chmod(path, "644"); let ok = sysfs::write_sysfs(path, &val.to_string()); sysfs::chmod(path, "444"); ok
 }
 

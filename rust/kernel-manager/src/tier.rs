@@ -85,13 +85,14 @@ impl FrameworkStatus {
 
     pub fn to_json(&self) -> String {
         format!(
-            r#"{{"kernelsu":{},"kernelsu_version":"{}","magisk":{},"magisk_version":"{}","zygisk_next":{},"zygisk_next_version":"{}","vector":{},"vector_version":"{}","zn_audit_patch":{},"shizuku":{},"resetprop":{},"tier":{},"tier_name":"{}"}}"#,
+            r#"{{"kernelsu":{},"kernelsu_version":"{}","magisk":{},"magisk_version":"{}","zygisk_next":{},"zygisk_next_version":"{}","vector":{},"vector_version":"{}","zn_audit_patch":{},"shizuku":{},"resetprop":{},"tier":{},"tier_name":"{}","has_resetprop":{}}}"#,
             self.kernelsu, self.kernelsu_version,
             self.magisk, self.magisk_version,
             self.zygisk_next, self.zygisk_next_version,
             self.vector, self.vector_version,
             self.zn_audit_patch, self.shizuku, self.resetprop,
-            self.current_tier as i32, self.current_tier.name()
+            self.current_tier as i32, self.current_tier.name(),
+            self.resetprop
         )
     }
 }
@@ -258,6 +259,8 @@ fn determine_tier(
     }
     // Tier 3: Root (KernelSU or Magisk with resetprop)
     if *kernelsu || *magisk {
+        // Even without resetprop, root tier can do sysfs writes
+        // resetprop-dependent features will fail gracefully
         return Tier::Root;
     }
     // Tier 2: ADB (Shizuku)

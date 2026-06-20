@@ -15,7 +15,7 @@ pub const SPOOFABLE_PROPS: &[&str] = &[
 ];
 
 pub fn resetprop(key: &str, value: &str) -> bool {
-    Command::new("resetprop").args([key, value]).status().is_ok()
+    Command::new("resetprop").args(["-n", key, value]).status().is_ok()
 }
 
 pub fn getprop(key: &str) -> String {
@@ -46,9 +46,10 @@ pub fn restore_all_spoofs() -> bool {
 
 // ==================== CPU Info Spoof (COPG mount --bind approach) ====================
 
-const SPOOF_DIR: &str = "/data/local/tmp";
+const SPOOF_DIR: &str = "/data/adb/farewell_spoof";
 
 pub fn create_cpuinfo_spoof(content: &str) -> bool {
+    let _ = std::fs::create_dir_all(SPOOF_DIR);
     let path = format!("{}/cpuinfo_spoof", SPOOF_DIR);
     match std::fs::write(&path, content) {
         Ok(_) => {

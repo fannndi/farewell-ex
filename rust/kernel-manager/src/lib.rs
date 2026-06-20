@@ -746,7 +746,7 @@ pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_clearChe
 
 #[unsafe(no_mangle)]
 pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_exportLogsNative(env: JNIEnv, _class: JClass) -> jstring {
-    match checker::export_logs_zip() {
+    match checker::export_logs() {
         Some(path) => create_jstring_safe(&env, path),
         None => create_jstring_safe(&env, String::new()),
     }

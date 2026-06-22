@@ -1,11 +1,18 @@
 use std::collections::HashMap;
 use std::process::Command;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread;
 use std::time::Duration;
 use crate::renderer;
 use crate::spoof;
 use crate::display_control;
 use crate::sysfs;
+
+const PROFILE_PATH: &str = "/data/local/tmp/farewell_profiles.json";
+const BOOT_CONFIG_PATH: &str = "/data/local/tmp/farewell_boot_config.json";
+const MONITOR_INTERVAL_MS: u64 = 500;
+
+pub static MONITOR_ACTIVE: AtomicBool = AtomicBool::new(false);
 
 // ==================== Foreground App Detection ====================
 
@@ -227,7 +234,7 @@ impl ProfileManager {
     }
 
     pub fn start_monitor(&mut self) {
-        loop {
+        while MONITOR_ACTIVE.load(Ordering::Relaxed) {
             let foreground = get_foreground_app();
             if !foreground.is_empty() && foreground != self.current_pkg {
                 self.apply_profile(&foreground);
@@ -237,16 +244,15 @@ impl ProfileManager {
                     self.apply_profile(&fallback);
                 }
             }
-            thread::sleep(Duration::from_millis(500));
+            thread::sleep(Duration::from_millis(MONITOR_INTERVAL_MS));
         }
     }
 
     pub fn start_monitor_thread() {
+        if MONITOR_ACTIVE.swap(true, Ordering::Relaxed) { return; }
         thread::spawn(|| {
             let mut mgr = ProfileManager::new();
-            // Load profiles from file if exists
-            let profile_path = "/data/local/tmp/farewell_profiles.json";
-            if let Ok(json) = std::fs::read_to_string(profile_path) {
+            if let Ok(json) = std::fs::read_to_string(PROFILE_PATH) {
                 mgr.load_profiles_json(&json);
             }
             mgr.start_monitor();
@@ -346,13 +352,11 @@ pub fn set_screen_brightness_mode_manual() -> bool {
 // ==================== Apply-on-Boot ====================
 
 pub fn save_boot_config(config: &str) -> bool {
-    let path = "/data/local/tmp/farewell_boot_config.json";
-    std::fs::write(path, config).is_ok()
+    std::fs::write(BOOT_CONFIG_PATH, config).is_ok()
 }
 
 pub fn load_boot_config() -> String {
-    let path = "/data/local/tmp/farewell_boot_config.json";
-    std::fs::read_to_string(path).unwrap_or_else(|_| "{}".to_string())
+    std::fs::read_to_string(BOOT_CONFIG_PATH).unwrap_or_else(|_| "{}".to_string())
 }
 
 pub fn apply_boot_config() -> bool {

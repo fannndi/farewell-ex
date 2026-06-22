@@ -98,14 +98,16 @@ pub fn read_file_buf(path: &str, buf: &mut [u8]) -> Option<usize> {
 #[inline]
 pub fn write_sysfs(path: &str, value: &str) -> bool {
     let c_path = CString::new(path).ok()?;
-    unsafe {
+    let ok = unsafe {
         let fd = libc::open(c_path.as_ptr(), libc::O_WRONLY | libc::O_TRUNC);
         if fd < 0 { return false; }
         let c_value = CString::new(value).ok()?;
         let written = libc::write(fd, c_value.as_ptr() as *const libc::c_void, c_value.as_bytes().len());
         libc::close(fd);
         written > 0
-    }
+    };
+    if ok { invalidate_cache(); }
+    ok
 }
 
 #[inline]

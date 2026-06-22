@@ -602,6 +602,12 @@ pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_startPro
 }
 
 #[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_stopProfileMonitorNative(_env: JNIEnv, _class: JClass) -> jint {
+    daemon::MONITOR_ACTIVE.store(false, std::sync::atomic::Ordering::Relaxed);
+    1
+}
+
+#[unsafe(no_mangle)]
 pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_saveProfilesNative(env: JNIEnv, _class: JClass, json: JString) -> jint {
     let j: String = env.get_string(&json).map(|s| s.into()).unwrap_or_default();
     if daemon::save_profiles_to_file("/data/local/tmp/farewell_profiles.json", &j) { 1 } else { 0 }

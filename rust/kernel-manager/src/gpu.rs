@@ -37,7 +37,7 @@ pub fn read_gpu_freq() -> i32 {
 }
 
 pub fn read_gpu_busy() -> i32 {
-    if let Some(content) = sysfs::read_sysfs("/sys/class/kgsl/kgsl-3d0/gpubusy") {
+    if let Some(content) = sysfs::read_sysfs_cached("/sys/class/kgsl/kgsl-3d0/gpubusy", 500) {
         let parts: Vec<&str> = content.split_whitespace().collect();
         if parts.len() >= 2 {
             if let (Ok(curr_busy), Ok(curr_total)) = (parts[0].parse::<i64>(), parts[1].parse::<i64>()) {

@@ -227,3 +227,30 @@ pub fn set_bus_dcvs_freq(bus_name: &str, min_freq: i32, max_freq: i32) -> bool {
     let r2 = sysfs::write_sysfs(&format!("{}/{}/min_freq", base, bus_name), &format!("{}", min_freq * 1000));
     r1 && r2
 }
+
+// ==================== Adrenoboost (SmartPack) ====================
+
+pub fn get_adrenoboost() -> i32 {
+    sysfs::read_sysfs_int("/sys/module/adrenoboost/parameters/adrenoboost", 1000).unwrap_or(0) as i32
+}
+
+pub fn set_adrenoboost(val: i32) -> bool {
+    let v = val.clamp(0, 2);
+    let path = "/sys/module/adrenoboost/parameters/adrenoboost";
+    sysfs::chmod(path, "644");
+    let ok = sysfs::write_sysfs(path, &v.to_string());
+    sysfs::chmod(path, "444"); ok
+}
+
+// ==================== Display Modes (SmartPack) ====================
+
+pub fn get_display_modes() -> Vec<String> {
+    match sysfs::read_sysfs_cached("/sys/devices/virtual/graphics/fb0/modes", 5000) {
+        Some(s) => s.split_whitespace().map(|m| m.to_string()).collect(),
+        None => Vec::new(),
+    }
+}
+
+pub fn set_display_mode(mode: &str) -> bool {
+    sysfs::write_sysfs("/sys/devices/virtual/graphics/fb0/mode", mode)
+}

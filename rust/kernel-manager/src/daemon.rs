@@ -410,22 +410,69 @@ impl BootConfig {
 
 // LEFTOVER: Perfect per-app renderer override (no flicker)
 // Requires: ReZygisk or LSPosed for per-process __system_property_get hooking
-// SkiaShift hooks 6 property read functions per-process
-// Cannot do with root only — properties are process-wide shared memory
 
 // LEFTOVER: Per-process COW property spoof
-// Requires: Zygisk companion for mmap(MAP_PRIVATE|MAP_FIXED) on /dev/__properties__
-// COPG does this per-process via Zygisk injection
 
 // LEFTOVER: Per-process Android ID forge
-// Requires: Zygisk JNI injection into target process
-// COPG forges Settings$Secure.sNameValueCache in ART heap per-process
 
 // LEFTOVER: Per-app DPI without flicker
 // Requires: LSPosed hooks on Display.getMetrics(), ResourcesImpl.updateConfiguration()
-// DPIS intercepts Configuration.fontScale at launch-activity-item lifecycle point
-// wm density approach has 200-500ms flicker during transition
 
 // LEFTOVER: Per-app mount namespace isolation
 // Requires: Zygisk companion with unshare(CLONE_NEWNS) before app specialization
-// Allows per-app mount --bind for /proc/cpuinfo without affecting other apps
+
+// ==================== Screen State Tracking (AZenith) ====================
+
+pub fn is_screen_on() -> bool {
+    sysfs::read_sysfs_cached("/sys/power/state", 0).is_some() || {
+        Command::new("dumpsys").args(["power"]).output()
+            .map(|o| String::from_utf8_lossy(&o.stdout).contains("mWakefulness=Awake"))
+            .unwrap_or(true)
+    }
+}
+
+pub fn set_screen_grace_period(ms: u64) {
+    for _ in 0..(ms / 500) {
+        if !is_screen_on() { thread::sleep(Duration::from_millis(500)); }
+        else { break; }
+    }
+}
+
+// ==================== Failure Debounce (AZenith) ====================
+
+pub fn debounce_write(path: &str, value: &str, max_retries: u32) -> bool {
+    for attempt in 0..max_retries {
+        if attempt > 0 { thread::sleep(Duration::from_millis(50)); }
+        let ok = sysfs::chmod(path, "644");
+        if !ok { continue; }
+        let written = sysfs::write_sysfs(path, value);
+        sysfs::chmod(path, "444");
+        if written { return true; }
+    }
+    false
+}
+
+pub fn has_excessive_failures(fail_count: &mut u32) -> bool {
+    *fail_count += 1;
+    if *fail_count >= 6 {
+        *fail_count = 0;
+        true
+    } else { false }
+}
+
+// ==================== Periodic FSTrim (AZenith) ====================
+
+pub fn fstrim_all() -> bool {
+    Command::new("fstrim").args(["-v", "/data"]).output()
+        .map(|o| o.status.success())
+        .unwrap_or(false)
+}
+
+pub fn should_run_fstrim(last_trim_hour: &mut u64) -> bool {
+    use std::time::{SystemTime, UNIX_EPOCH};
+    let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_secs() / 3600;
+    if now - *last_trim_hour >= 12 {
+        *last_trim_hour = now;
+        true
+    } else { false }
+}

@@ -148,3 +148,27 @@ pub fn discover_bypass_charging_node() -> Option<String> {
     }
     None
 }
+
+// ==================== Charging Current (SmartPack) ====================
+
+pub fn get_constant_charge_current_max() -> i32 {
+    sysfs::read_sysfs_int("/sys/class/power_supply/battery/constant_charge_current_max", 1000).unwrap_or(-1) as i32
+}
+
+pub fn set_constant_charge_current_max(ua: i32) -> bool {
+    let path = "/sys/class/power_supply/battery/constant_charge_current_max";
+    sysfs::chmod(path, "644");
+    let ok = sysfs::write_sysfs(path, &ua.to_string());
+    sysfs::chmod(path, "444"); ok
+}
+
+pub fn get_usb_current_max() -> i32 {
+    sysfs::read_sysfs_int("/sys/class/power_supply/usb/current_max", 1000).unwrap_or(-1) as i32
+}
+
+pub fn set_usb_current_max(ua: i32) -> bool {
+    let path = "/sys/class/power_supply/usb/current_max";
+    sysfs::chmod(path, "644");
+    let ok = sysfs::write_sysfs(path, &ua.to_string());
+    sysfs::chmod(path, "444"); ok
+}

@@ -15,6 +15,8 @@ mod display_control;
 mod daemon;
 mod tier;
 mod checker;
+mod hotplug;
+mod disk;
 
 use jni::objects::{JClass, JString};
 use jni::sys::{jfloat, jint, jlong, jstring};
@@ -756,4 +758,158 @@ pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_exportLo
         Some(path) => create_jstring_safe(&env, path),
         None => create_jstring_safe(&env, String::new()),
     }
+}
+
+// ==================== HOTPLUG ====================
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_getAvailableHotplugDriversNative(env: JNIEnv, _class: JClass) -> jstring {
+    create_jstring_safe(&env, serde_json::to_string(&hotplug::get_available_hotplug_drivers()).unwrap_or_default())
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_getCoreCtlMinCpusNative(_env: JNIEnv, _class: JClass, cluster: jint) -> jint {
+    hotplug::get_core_ctl_min_cpus(cluster)
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setCoreCtlMinCpusNative(_env: JNIEnv, _class: JClass, cluster: jint, n: jint) -> jint {
+    if hotplug::set_core_ctl_min_cpus(cluster, n) { 1 } else { 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setCoreCtlMaxCpusNative(_env: JNIEnv, _class: JClass, cluster: jint, n: jint) -> jint {
+    if hotplug::set_core_ctl_max_cpus(cluster, n) { 1 } else { 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setMsmHotplugEnabledNative(_env: JNIEnv, _class: JClass, enabled: jint) -> jint {
+    if hotplug::set_msm_hotplug_enabled(enabled != 0) { 1 } else { 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_isScreenOnNative(_env: JNIEnv, _class: JClass) -> jint {
+    if daemon::is_screen_on() { 1 } else { 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_fstrimAllNative(_env: JNIEnv, _class: JClass) -> jint {
+    if daemon::fstrim_all() { 1 } else { 0 }
+}
+
+// ==================== CPU DEVFREQ ====================
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_getDevfreqCurFreqNative(_env: JNIEnv, _class: JClass, device: JString) -> jlong {
+    let d: String = _env.get_string(&device).map(|s| s.into()).unwrap_or_default();
+    cpu::get_devfreq_cur_freq(&d)
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setDevfreqMinFreqNative(_env: JNIEnv, _class: JClass, device: JString, freq: jlong) -> jint {
+    let d: String = _env.get_string(&device).map(|s| s.into()).unwrap_or_default();
+    if cpu::set_devfreq_min_freq(&d, freq) { 1 } else { 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setDevfreqMaxFreqNative(_env: JNIEnv, _class: JClass, device: JString, freq: jlong) -> jint {
+    let d: String = _env.get_string(&device).map(|s| s.into()).unwrap_or_default();
+    if cpu::set_devfreq_max_freq(&d, freq) { 1 } else { 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setDevfreqGovernorNative(env: JNIEnv, _class: JClass, device: JString, gov: JString) -> jint {
+    let d: String = env.get_string(&device).map(|s| s.into()).unwrap_or_default();
+    let g: String = env.get_string(&gov).map(|s| s.into()).unwrap_or_default();
+    if cpu::set_devfreq_governor(&d, &g) { 1 } else { 0 }
+}
+
+// ==================== ADRENOBOOST ====================
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_getAdrenoboostNative(_env: JNIEnv, _class: JClass) -> jint {
+    gpu::get_adrenoboost()
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setAdrenoboostNative(_env: JNIEnv, _class: JClass, val: jint) -> jint {
+    if gpu::set_adrenoboost(val) { 1 } else { 0 }
+}
+
+// ==================== DISPLAY MODES ====================
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_getDisplayModesNative(env: JNIEnv, _class: JClass) -> jstring {
+    create_jstring_safe(&env, serde_json::to_string(&gpu::get_display_modes()).unwrap_or_default())
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setDisplayModeNative(env: JNIEnv, _class: JClass, mode: JString) -> jint {
+    let m: String = env.get_string(&mode).map(|s| s.into()).unwrap_or_default();
+    if gpu::set_display_mode(&m) { 1 } else { 0 }
+}
+
+// ==================== CHARGING CURRENT ====================
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_getConstantChargeCurrentMaxNative(_env: JNIEnv, _class: JClass) -> jint {
+    power::get_constant_charge_current_max()
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setConstantChargeCurrentMaxNative(_env: JNIEnv, _class: JClass, ua: jint) -> jint {
+    if power::set_constant_charge_current_max(ua) { 1 } else { 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_getUsbCurrentMaxNative(_env: JNIEnv, _class: JClass) -> jint {
+    power::get_usb_current_max()
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setUsbCurrentMaxNative(_env: JNIEnv, _class: JClass, ua: jint) -> jint {
+    if power::set_usb_current_max(ua) { 1 } else { 0 }
+}
+
+// ==================== CPUSET ====================
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_getCpusetCpusNative(env: JNIEnv, _class: JClass, group: JString) -> jstring {
+    let g: String = env.get_string(&group).map(|s| s.into()).unwrap_or_default();
+    create_jstring_safe(&env, scheduler::get_cpuset_cpus(&g))
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setCpusetCpusNative(env: JNIEnv, _class: JClass, group: JString, cpus: JString) -> jint {
+    let g: String = env.get_string(&group).map(|s| s.into()).unwrap_or_default();
+    let c: String = env.get_string(&cpus).map(|s| s.into()).unwrap_or_default();
+    if scheduler::set_cpuset_cpus(&g, &c) { 1 } else { 0 }
+}
+
+// ==================== DISK STATS ====================
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_readDiskStatsNative(env: JNIEnv, _class: JClass) -> jstring {
+    create_jstring_safe(&env, disk::read_diskstats_json())
+}
+
+// ==================== QCOM DEVFREQ DEVICES ====================
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_getQcomDevfreqDevicesNative(env: JNIEnv, _class: JClass) -> jstring {
+    create_jstring_safe(&env, serde_json::to_string(&cpu::get_qcom_devfreq_devices()).unwrap_or_default())
+}
+
+// ==================== CPUSET GROUPS ====================
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_getAvailableCpusetGroupsNative(env: JNIEnv, _class: JClass) -> jstring {
+    create_jstring_safe(&env, serde_json::to_string(&scheduler::get_available_cpuset_groups()).unwrap_or_default())
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_debounceWriteNative(env: JNIEnv, _class: JClass, path: JString, value: JString) -> jint {
+    let p: String = env.get_string(&path).map(|s| s.into()).unwrap_or_default();
+    let v: String = env.get_string(&value).map(|s| s.into()).unwrap_or_default();
+    if daemon::debounce_write(&p, &v, 3) { 1 } else { 0 }
 }

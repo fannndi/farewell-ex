@@ -138,6 +138,41 @@ pub fn set_overcommit_ratio(pct: i32) -> bool {
     sysfs::chmod(path, "444"); ok
 }
 
+// ==================== Cpuset (ZKM) ====================
+
+pub fn get_cpuset_cpus(group: &str) -> String {
+    sysfs::read_sysfs_cached(&format!("/dev/cpuset/{}/cpus", group), 1000).unwrap_or_default()
+}
+
+pub fn set_cpuset_cpus(group: &str, cpus: &str) -> bool {
+    sysfs::write_sysfs(&format!("/dev/cpuset/{}/cpus", group), cpus)
+}
+
+pub fn get_cpuset_mems(group: &str) -> String {
+    sysfs::read_sysfs_cached(&format!("/dev/cpuset/{}/mems", group), 1000).unwrap_or_default()
+}
+
+pub fn set_cpuset_mems(group: &str, mems: &str) -> bool {
+    sysfs::write_sysfs(&format!("/dev/cpuset/{}/mems", group), mems)
+}
+
+pub fn get_available_cpuset_groups() -> Vec<String> {
+    let base = "/dev/cpuset";
+    let mut groups = Vec::new();
+    if let Ok(entries) = std::fs::read_dir(base) {
+        for entry in entries.flatten() {
+            if entry.path().is_dir() {
+                if let Some(name) = entry.file_name().to_str() {
+                    if sysfs::file_exists(&format!("{}/{}/cpus", base, name)) {
+                        groups.push(name.to_string());
+                    }
+                }
+            }
+        }
+    }
+    groups
+}
+
 pub fn drop_caches() -> bool {
     sysfs::chmod("/proc/sys/vm/drop_caches", "644");
     sysfs::write_sysfs("/proc/sys/vm/drop_caches", "3")

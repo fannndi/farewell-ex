@@ -335,3 +335,44 @@ pub fn set_cpu_dcvs_disable(core: i32, disable: bool) -> bool {
     let ok = sysfs::write_sysfs(&path, if disable { "1" } else { "0" });
     sysfs::chmod(&path, "444"); ok
 }
+
+// ==================== Devfreq Generic (QCOM CPU/MEM) ====================
+
+pub fn get_devfreq_available_frequencies(device: &str) -> Vec<i64> {
+    let content = sysfs::read_sysfs_cached(&format!("/sys/class/devfreq/{}/available_frequencies", device), 5000);
+    match content {
+        Some(s) => s.split_whitespace().filter_map(|v| v.parse::<i64>().ok()).collect(),
+        None => Vec::new(),
+    }
+}
+
+pub fn get_devfreq_cur_freq(device: &str) -> i64 {
+    sysfs::read_sysfs_int(&format!("/sys/class/devfreq/{}/cur_freq", device), 200).unwrap_or(0)
+}
+
+pub fn set_devfreq_min_freq(device: &str, freq: i64) -> bool {
+    sysfs::write_sysfs(&format!("/sys/class/devfreq/{}/min_freq", device), &freq.to_string())
+}
+
+pub fn set_devfreq_max_freq(device: &str, freq: i64) -> bool {
+    sysfs::write_sysfs(&format!("/sys/class/devfreq/{}/max_freq", device), &freq.to_string())
+}
+
+pub fn get_devfreq_governor(device: &str) -> String {
+    sysfs::read_sysfs_cached(&format!("/sys/class/devfreq/{}/governor", device), 1000).unwrap_or_default()
+}
+
+pub fn set_devfreq_governor(device: &str, gov: &str) -> bool {
+    sysfs::write_sysfs(&format!("/sys/class/devfreq/{}/governor", device), gov)
+}
+
+// QCOM SM7150-specific devfreq devices
+pub const QCOM_DEVICES: &[&str] = &[
+    "soc:qcom,cpubw",
+    "soc:qcom,memlat-cpu0",
+    "soc:qcom,memlat-cpu6",
+];
+
+pub fn get_qcom_devfreq_devices() -> Vec<String> {
+    QCOM_DEVICES.iter().filter(|d| sysfs::file_exists(&format!("/sys/class/devfreq/{}", d))).map(|s| s.to_string()).collect()
+}

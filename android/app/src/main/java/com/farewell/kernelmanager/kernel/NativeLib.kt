@@ -192,6 +192,47 @@ object NativeLib {
     external fun clearCheckerLogNative(): Int
     external fun exportLogsNative(): String
 
+    // Hotplug (QCOM)
+    external fun getAvailableHotplugDriversNative(): String
+    external fun getCoreCtlMinCpusNative(cluster: Int): Int
+    external fun setCoreCtlMinCpusNative(cluster: Int, n: Int): Int
+    external fun setCoreCtlMaxCpusNative(cluster: Int, n: Int): Int
+    external fun setMsmHotplugEnabledNative(enabled: Boolean): Int
+
+    // Screen State + Daemon
+    external fun isScreenOnNative(): Int
+    external fun fstrimAllNative(): Int
+    external fun debounceWriteNative(path: String, value: String): Int
+
+    // CPU Devfreq
+    external fun getDevfreqCurFreqNative(device: String): Long
+    external fun setDevfreqMinFreqNative(device: String, freq: Long): Int
+    external fun setDevfreqMaxFreqNative(device: String, freq: Long): Int
+    external fun setDevfreqGovernorNative(device: String, gov: String): Int
+    external fun getQcomDevfreqDevicesNative(): String
+
+    // Adrenoboost
+    external fun getAdrenoboostNative(): Int
+    external fun setAdrenoboostNative(val: Int): Int
+
+    // Display Modes
+    external fun getDisplayModesNative(): String
+    external fun setDisplayModeNative(mode: String): Int
+
+    // Charging Current
+    external fun getConstantChargeCurrentMaxNative(): Int
+    external fun setConstantChargeCurrentMaxNative(ua: Int): Int
+    external fun getUsbCurrentMaxNative(): Int
+    external fun setUsbCurrentMaxNative(ua: Int): Int
+
+    // Cpuset
+    external fun getCpusetCpusNative(group: String): String
+    external fun setCpusetCpusNative(group: String, cpus: String): Int
+    external fun getAvailableCpusetGroupsNative(): String
+
+    // Disk Stats
+    external fun readDiskStatsNative(): String
+
     // Kotlin wrappers
     fun detectCpuClusters(): List<ClusterInfo>? {
         if (!isLoaded) return null

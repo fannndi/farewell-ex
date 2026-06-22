@@ -138,6 +138,8 @@ private fun FeatureItem(feature: FeatureUnlock) {
             Text(feature.name, fontSize = 14.sp)
             Text(
                 if (feature.unlocked) "Unlocked"
+                else if (feature.requiredFramework.isNotEmpty())
+                    "Install ${feature.requiredFramework}"
                 else "Requires Tier ${feature.tier}",
                 fontSize = 11.sp,
                 color = if (feature.unlocked) Color.Gray else Color(0xFFFF9800)

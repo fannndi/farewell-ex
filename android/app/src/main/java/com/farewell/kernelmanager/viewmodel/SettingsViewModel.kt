@@ -20,6 +20,7 @@ data class FeatureUnlock(
     val name: String,
     val tier: Int,
     val unlocked: Boolean,
+    val requiredFramework: String = "",
 )
 
 class SettingsViewModel : ViewModel() {
@@ -60,12 +61,12 @@ class SettingsViewModel : ViewModel() {
             FeatureUnlock("Device Spoofing", 3, tier >= 3),
             FeatureUnlock("GPU Renderer Switch", 3, tier >= 3),
             FeatureUnlock("Display DPI (Global)", 2, tier >= 2),
-            FeatureUnlock("Per-App Renderer", 4, tier >= 4),
-            FeatureUnlock("Per-App Spoofing", 4, tier >= 4),
-            FeatureUnlock("COW Properties", 4, tier >= 4),
-            FeatureUnlock("Per-App CPU Info", 4, tier >= 4),
-            FeatureUnlock("Per-App DPI (No Flicker)", 5, tier >= 5),
-            FeatureUnlock("Per-App Font Scaling", 5, tier >= 5),
+            FeatureUnlock("Per-App Renderer", 4, tier >= 4, "ZygiskNext"),
+            FeatureUnlock("Per-App Spoofing", 4, tier >= 4, "ZygiskNext"),
+            FeatureUnlock("COW Properties", 4, tier >= 4, "ZygiskNext"),
+            FeatureUnlock("Per-App CPU Info", 4, tier >= 4, "ZygiskNext"),
+            FeatureUnlock("Per-App DPI (No Flicker)", 5, tier >= 5, "LSPosed/Vector"),
+            FeatureUnlock("Per-App Font Scaling", 5, tier >= 5, "LSPosed/Vector"),
         )
     }
 }

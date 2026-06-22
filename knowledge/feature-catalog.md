@@ -1,362 +1,354 @@
 # Feature Catalog — Kernel Manager untuk POCO X3 NFC
 
-Berdasarkan Phase 2 study dari 11 source repositori. Organized by kategori fitur. Setiap fitur mencakup: source, sysfs/procfs path, root requirement, complexity.
+> Implementasi vs 16 Source References (2,115 files dipelajari, 18 Rust module, 40+ Kt/Java)
+> **Kolom Status:** ✅ = implemented | ⚠️ = partial | ❌ = missing/leftover
 
 ---
 
 ## 1. CPU Frequency & Governor
 
-### 1.1 Read/Write Governor
-| Fitur | Source | Sysfs Path | Root | Complexity |
-|-------|--------|------------|------|------------|
-| Read current governor | Xtra-Kernel, SmartPack, Encore | `/sys/devices/system/cpu/cpu{N}/cpufreq/scaling_governor` | Ya | Rendah |
-| Set governor | SmartPack, Encore | Echo ke path di atas | Ya | Rendah |
-| List available governors | Xtra-Kernel | `/sys/devices/system/cpu/cpu{N}/cpufreq/scaling_available_governors` | Tidak | Rendah |
-| Read scaling max freq | Xtra-Kernel | `/sys/devices/system/cpu/cpu{N}/cpufreq/scaling_max_freq` | Tidak | Rendah |
-| Read scaling min freq | Xtra-Kernel | `/sys/devices/system/cpu/cpu{N}/cpufreq/scaling_min_freq` | Tidak | Rendah |
-| Read cpuinfo max (hardware limit) | SmartPack | `/sys/devices/system/cpu/cpu{N}/cpufreq/cpuinfo_max_freq` | Tidak | Rendah |
-| Read cpuinfo min | SmartPack | `/sys/devices/system/cpu/cpu{N}/cpufreq/cpuinfo_min_freq` | Tidak | Rendah |
-| Read current freq | Xtra-Kernel | `/sys/devices/system/cpu/cpu{N}/cpufreq/scaling_cur_freq` | Tidak | Rendah |
-| Read time in state | SmartPack | `/sys/devices/system/cpu/cpu{N}/cpufreq/stats/time_in_state` | Tidak | Rendah |
-| Read OPP table | SmartPack | `/sys/devices/system/cpu/cpu{N}/opp_table` | Tidak | Rendah |
+| # | Fitur | Source | Sysfs Path | Root | Status |
+|---|-------|--------|------------|------|--------|
+| 1 | Read current governor | Xtra-Kernel, SmartPack, Encore | `/sys/devices/system/cpu/cpu{N}/cpufreq/scaling_governor` | Ya | ✅ |
+| 2 | Set governor | SmartPack, Encore | Echo ke path di atas | Ya | ✅ |
+| 3 | List available governors | Xtra-Kernel | `/sys/devices/system/cpu/cpu{N}/cpufreq/scaling_available_governors` | Tidak | ✅ |
+| 4 | Read scaling max freq | Xtra-Kernel | `/sys/devices/system/cpu/cpu{N}/cpufreq/scaling_max_freq` | Tidak | ✅ |
+| 5 | Read scaling min freq | Xtra-Kernel | `/sys/devices/system/cpu/cpu{N}/cpufreq/scaling_min_freq` | Tidak | ✅ |
+| 6 | Read cpuinfo max | SmartPack | `/sys/devices/system/cpu/cpu{N}/cpufreq/cpuinfo_max_freq` | Tidak | ✅ |
+| 7 | Read current freq | Xtra-Kernel | `/sys/devices/system/cpu/cpu{N}/cpufreq/scaling_cur_freq` | Tidak | ✅ |
+| 8 | Set max freq limit | Xtra-Kernel | `scaling_max_freq` | Ya | ✅ |
+| 9 | Set min freq limit | Xtra-Kernel | `scaling_min_freq` | Ya | ✅ |
+| 10 | Input boost ms | SmartPack, RvKernel | `/sys/devices/system/cpu/cpu_boost/input_boost_ms` | Ya | ✅ |
+| 11 | Sched boost on input | RvKernel | `/sys/devices/system/cpu/cpu_boost/sched_boost_on_input` | Ya | ✅ |
+| 12 | Core online/offline | Xtra-Kernel | `/sys/devices/system/cpu/cpu{N}/online` | Ya | ✅ |
+| 13 | CPU EAS enable | AZenith | `/sys/devices/system/cpu/eas/enable` | Ya | ✅ |
+| 14 | CPU DCVS disable | Encore | `/sys/devices/system/cpu/cpu{N}/core_ctrl/cpudcvs_disable` | Ya | ✅ |
+| 15 | Hard limit max | SmartPack | `/sys/kernel/cpufreq_hardlimit/scaling_max_freq` | Ya | ✅ |
+| 16 | MSM cpufreq limit | SmartPack, Encore | `/sys/kernel/msm_cpufreq_limit/cpufreq_limit` | Ya | ✅ |
+| 17 | Cluster detection | Xtra-Kernel | group by (min_freq, max_freq) | Tidak | ✅ |
+| 18 | Dynamic sysfs probing | RvKernel | Utils.testFile() | Tidak | ✅ |
+| 19 | Screen-off max freq | SmartPack | `screen_off_max_freq` | Ya | ❌ |
+| 20 | CoreCtl min cpus | SmartPack | `core_ctl/min_cpus` | Ya | ❌ |
+| 21 | MSM Hotplug (12 params) | SmartPack | `/sys/module/msm_hotplug/parameters/` | Ya | ❌ |
+| 22 | IntelliPlug (9 params) | SmartPack | `/sys/devices/virtual/misc/intelliplug/` | Ya | ❌ |
+| 23 | AlucardHotplug (12 params) | SmartPack | `/sys/kernel/alucard_hotplug/` | Ya | ❌ |
+| 24 | AutoSMP (4 params) | SmartPack | `/sys/module/autosmp/parameters/` | Ya | ❌ |
+| 25 | BluPlug (6 params) | SmartPack | `/sys/module/blu_plug/parameters/` | Ya | ❌ |
+| 26 | CPU time-in-state | SmartPack | `/cpufreq/stats/time_in_state` | Tidak | ⚠️ |
+| 27 | CPU OPP table | SmartPack | `/cpu{N}/opp_table` | Tidak | ❌ |
 
-### 1.2 Frequency Limiting
-| Fitur | Source | Sysfs Path | Root | Complexity |
-|-------|--------|------------|------|------------|
-| Set max freq limit | Xtra-Kernel, CPUControlUseCase | `scaling_max_freq` (per policy) | Ya | Rendah |
-| Set min freq limit | Xtra-Kernel, CPUControlUseCase | `scaling_min_freq` (per policy) | Ya | Rendah |
-| Screen-off max freq | SmartPack | `/sys/devices/system/cpu/cpu{N}/cpufreq/screen_off_max_freq` | Ya | Rendah |
-| Freq lock (min=max) | Xtra-Kernel (CPUControlUseCase) | min=max = target | Ya | Sedang |
-| Freq lock verification | Xtra-Kernel | Poll 10× 300ms, tolerance ±50MHz | Ya | Sedang |
-| Hard limit max | SmartPack | `/sys/kernel/cpufreq_hardlimit/scaling_max_freq` | Ya | Rendah |
-| Hard limit min | SmartPack | `/sys/kernel/cpufreq_hardlimit/scaling_min_freq` | Ya | Rendah |
-| MSM cpufreq limit | SmartPack, Encore | `/sys/kernel/msm_cpufreq_limit/cpufreq_limit` | Ya | Rendah |
-
-### 1.3 Cluster Detection
-| Fitur | Source | Method | Root | Complexity |
-|-------|--------|--------|------|------------|
-| Group by min/max freq | Xtra-Kernel (Rust) | Loop cpu 0..15, group by (min_freq, max_freq) pair | Tidak | Sedang |
-| Group by cpuinfo_max_freq | Xtra-Kernel (Kotlin fallback) | `cat cpuinfo_max_freq` per core → group by | Ya | Sedang |
-| Dynamic sysfs probing | RvKernel | `Utils.testFile()` → hide/show UI | Tidak | Rendah |
-| Parallel detection | Xtra-Kernel (CPUControlUseCase) | `coroutineScope { cores.map { async { ... } } }` | Ya | Sedang |
-
-### 1.4 CPU Hotplug
-| Fitur | Source | Sysfs Path | Root | Complexity |
-|-------|--------|------------|------|------------|
-| Core online/offline | Xtra-Kernel | `/sys/devices/system/cpu/cpu{N}/online` | Ya | Rendah |
-| CoreCtl min cpus | SmartPack | `/sys/devices/system/cpu/cpu{N}/core_ctl/min_cpus` | Ya | Rendah |
-| MSM Hotplug | SmartPack | `/sys/module/msm_hotplug/parameters/` | Ya | Rendah |
-| IntelliPlug | SmartPack | `/sys/devices/virtual/misc/intelliplug/` | Ya | Rendah |
-| AlucardHotplug | SmartPack | `/sys/kernel/alucard_hotplug/` | Ya | Rendah |
-| AutoSMP | SmartPack | `/sys/module/autosmp/parameters/` | Ya | Rendah |
-
-### 1.5 CPU Boost
-| Fitur | Source | Sysfs Path | Root | Complexity |
-|-------|--------|------------|------|------------|
-| Input boost ms | SmartPack, RvKernel | `/sys/devices/system/cpu/cpu_boost/input_boost_ms` | Ya | Rendah |
-| Sched boost on input | RvKernel | `/sys/devices/system/cpu/cpu_boost/sched_boost_on_input` | Ya | Rendah |
+**Done: 19/27 | Missing: 7 hotplug drivers + 2 stats | Partial: 1**
 
 ---
 
 ## 2. GPU Control
 
-### 2.1 GPU Frequency
-| Fitur | Source | Sysfs Path | Root | Complexity |
-|-------|--------|------------|------|------------|
-| Read current freq | Xtra-Kernel, ZKM | `/sys/class/kgsl/kgsl-3d0/gpuclk` | Tidak | Rendah |
-| Read available freqs | Xtra-Kernel, ZKM | `/sys/class/kgsl/kgsl-3d0/gpu_available_frequencies` | Tidak | Rendah |
-| Set max freq | Xtra-Kernel (GPUControlUseCase) | `/sys/class/kgsl/kgsl-3d0/max_gpuclk` | Ya | Rendah |
-| Set min freq | Xtra-Kernel (GPUControlUseCase) | `/sys/class/kgsl/kgsl-3d0/devfreq/min_freq` | Ya | Rendah |
-| GPU freq lock | Xtra-Kernel (GPUControlUseCase) | Lock + disable throttling | Ya | Sedang |
-| Devfreq governor | ZKM, SmartPack | `/sys/class/kgsl/kgsl-3d0/devfreq/governor` | Ya | Rendah |
-| Devfreq boost | SmartPack | `/sys/class/devfreq/*/boost` | Ya | Rendah |
+| # | Fitur | Source | Sysfs Path | Root | Status |
+|---|-------|--------|------------|------|--------|
+| 1 | Read current freq | Xtra-Kernel, ZKM | `/sys/class/kgsl/kgsl-3d0/gpuclk` | Tidak | ✅ |
+| 2 | Read available freqs | Xtra-Kernel, ZKM | `gpu_available_frequencies` / `available_frequencies` | Tidak | ✅ |
+| 3 | Set max freq | Xtra-Kernel | `max_gpuclk` / `devfreq/max_freq` | Ya | ✅ |
+| 4 | Set min freq | Xtra-Kernel | `devfreq/min_freq` | Ya | ✅ |
+| 5 | Devfreq governor | ZKM, SmartPack | `/sys/class/kgsl/kgsl-3d0/devfreq/governor` | Ya | ✅ |
+| 6 | Read num power levels | SmartPack, Encore | `/sys/class/kgsl/kgsl-3d0/num_pwrlevels` | Tidak | ✅ |
+| 7 | Set max power level | Encore, ZKM | `max_pwrlevel` | Ya | ✅ |
+| 8 | Set min power level | Encore, ZKM | `min_pwrlevel` | Ya | ✅ |
+| 9 | GPU force params (6) | Encore | `force_clk_on`, `force_bus_on`, `force_rail_on`, `force_no_nap`, `bus_split`, `throttling` | Ya | ✅ |
+| 10 | GPU idle timer | Encore | `/sys/class/kgsl/kgsl-3d0/idle_timer` | Ya | ✅ |
+| 11 | GPU busy percentage | Xtra-Kernel, ZKM | `/sys/class/kgsl/kgsl-3d0/gpubusy` (delta) | Tidak | ✅ |
+| 12 | GPU temp (thermal zone) | Xtra-Kernel | Thermal zone "gpu"/"adreno"/"kgsl" | Tidak | ✅ |
+| 13 | Adreno boost | ZKM, SmartPack | `devfreq/adrenoboost` | Ya | ❌ |
+| 14 | Adreno Idler (5 params) | ZKM, SmartPack | `/sys/module/adreno_idler/parameters/*` | Ya | ✅ |
+| 15 | Simple GPU (3 params) | ZKM | `/sys/module/simple_gpu_algorithm/parameters/*` | Ya | ✅ |
+| 16 | Bus DCVS components | ZKM | `/sys/devices/system/cpu/bus_dcvs/` | Tidak | ✅ |
+| 17 | Bus DCVS freq set | ZKM | bus_dcvs/{name}/{min,max}_freq | Ya | ✅ |
+| 18 | GPU model detect | Xtra-Kernel | `gpu_model` / `devfreq/gpu_model` | Tidak | ✅ |
+| 19 | GPU driver info | ZKM | `devfreq/name` | Tidak | ✅ |
+| 20 | Multi-vendor: Mali | ZKM | `/sys/class/misc/mali0/device/gpuinfo` | Tidak | ❌ |
+| 21 | Devfreq boost | SmartPack | `/sys/class/devfreq/*/boost` | Ya | ❌ |
 
-### 2.2 GPU Power Levels
-| Fitur | Source | Sysfs Path | Root | Complexity |
-|-------|--------|------------|------|------------|
-| Read num power levels | SmartPack, Encore | `/sys/class/kgsl/kgsl-3d0/num_pwrlevels` | Tidak | Rendah |
-| Read default power level | SmartPack | `/sys/class/kgsl/kgsl-3d0/default_pwrlevel` | Tidak | Rendah |
-| Set max power level | Encore, ZKM | `/sys/class/kgsl/kgsl-3d0/max_pwrlevel` (lower = higher perf) | Ya | Rendah |
-| Set min power level | Encore, ZKM | `/sys/class/kgsl/kgsl-3d0/min_pwrlevel` | Ya | Rendah |
-| GPU force clk on | Encore, Xtra-Kernel | `/sys/class/kgsl/kgsl-3d0/force_clk_on` (0/1) | Ya | Rendah |
-| GPU force bus on | Encore, Xtra-Kernel | `/sys/class/kgsl/kgsl-3d0/force_bus_on` (0/1) | Ya | Rendah |
-| GPU force rail on | Encore | `/sys/class/kgsl/kgsl-3d0/force_rail_on` (0/1) | Ya | Rendah |
-| GPU force no nap | Encore | `/sys/class/kgsl/kgsl-3d0/force_no_nap` (0/1) | Ya | Rendah |
-| GPU bus split | Encore | `/sys/class/kgsl/kgsl-3d0/bus_split` (0/1) | Ya | Rendah |
-| GPU throttling toggle | ZKM, Encore | `/sys/class/kgsl/kgsl-3d0/throttling` (0/1) | Ya | Rendah |
-| GPU idle timer | Encore | `/sys/class/kgsl/kgsl-3d0/idle_timer` | Ya | Rendah |
-
-### 2.3 GPU Busy & Temp
-| Fitur | Source | Sysfs Path | Root | Complexity |
-|-------|--------|------------|------|------------|
-| GPU busy percentage | Xtra-Kernel, ZKM | `/sys/class/kgsl/kgsl-3d0/gpubusy` (delta) | Tidak | Rendah |
-| GPU busy % fallback | Xtra-Kernel (KernelRepository) | `/sys/class/kgsl/kgsl-3d0/gpu_busy_percentage` | Tidak | Rendah |
-| GPU temperature | Xtra-Kernel (GPUControlUseCase) | Thermal zone with "gpu"/"kgsl"/"adreno" | Tidak | Rendah |
-
-### 2.4 Adreno-Specific
-| Fitur | Source | Sysfs Path | Root | Complexity |
-|-------|--------|------------|------|------------|
-| Adreno boost | ZKM, SmartPack | `/sys/class/kgsl/kgsl-3d0/devfreq/adrenoboost` | Ya | Rendah |
-| Adreno Idler toggle | ZKM, SmartPack | `/sys/module/adreno_idler/parameters/adreno_idler_active` | Ya | Rendah |
-| Idler idlewait | ZKM | `/sys/module/adreno_idler/parameters/adreno_idler_idlewait` | Ya | Rendah |
-| Idler downdifferential | ZKM | `/sys/module/adreno_idler/parameters/adreno_idler_downdifferential` | Ya | Rendah |
-| Idler idleworkload | ZKM | `/sys/module/adreno_idler/parameters/adreno_idler_idleworkload` | Ya | Rendah |
-| Simple GPU algorithm | ZKM | `/sys/module/simple_gpu_algorithm/parameters/*` | Ya | Rendah |
-| Adrenoboost | Encore | `/sys/module/adrenoboost/parameters/` | Ya | Rendah |
-
-### 2.5 Bus DCVS (Dynamic Voltage & Clock Scaling)
-| Fitur | Source | Sysfs Path | Root | Complexity |
-|-------|--------|------------|------|------------|
-| List bus components | ZKM (AdrenoUtils) | `/sys/devices/system/cpu/bus_dcvs/` subdirs | Tidak | Rendah |
-| Read bus freq | ZKM | `bus_dcvs/{busName}/available_frequencies` | Tidak | Rendah |
-| Set bus freq | ZKM | `bus_dcvs/{busName}/max_freq` + `min_freq` | Ya | Sedang |
-| Bus monitor | ZKM | `/sys/class/devfreq/kgsl-busmon/*` | Tidak | Rendah |
-
-### 2.6 GPU Multi-Vendor Detection
-| Fitur | Source | Method | Root | Complexity |
-|-------|--------|--------|------|------------|
-| KGSL detection | Xtra-Kernel (Rust) | `file_exists("/sys/class/kgsl/kgsl-3d0/gpuclk")` | Tidak | Rendah |
-| Adreno model | Xtra-Kernel (Rust) | `gpu_model` or `devfreq/gpu_model` | Tidak | Rendah |
-| Mali detection | Xtra-Kernel (Rust), ZKM | `/sys/class/misc/mali0/device/gpuinfo` | Tidak | Rendah |
-| SurfaceFlinger fallback | Xtra-Kernel (GPUControlUseCase) | `dumpsys SurfaceFlinger | grep GLES` | Tidak | Sedang |
-| ro.hardware.vulkan probe | Xtra-Kernel (Rust) | System property | Tidak | Rendah |
+**Done: 19/21 | Missing: Mali detection, devfreq boost, adreno boost**
 
 ---
 
 ## 3. Memory & ZRAM
 
-### 3.1 Memory Info
-| Fitur | Source | Method | Root | Complexity |
-|-------|--------|--------|------|------------|
-| Read MemTotal | Xtra-Kernel | `/proc/meminfo` → parse | Tidak | Rendah |
-| Read MemAvailable | Xtra-Kernel | `/proc/meminfo` → parse | Tidak | Rendah |
-| Read Swap info | Xtra-Kernel | `/proc/meminfo` → SwapTotal/SwapFree | Tidak | Rendah |
-| Read memory pressure | Xtra-Kernel | `used/total * 100` | Tidak | Rendah |
+| # | Fitur | Source | Path | Root | Status |
+|---|-------|--------|------|------|--------|
+| 1 | Read MemTotal | Xtra-Kernel | `/proc/meminfo` | Tidak | ✅ |
+| 2 | Read MemAvailable | Xtra-Kernel | `/proc/meminfo` | Tidak | ✅ |
+| 3 | Read Swap info | Xtra-Kernel | `/proc/meminfo` | Tidak | ✅ |
+| 4 | Memory pressure | Xtra-Kernel | used/total * 100 | Tidak | ✅ |
+| 5 | ZRAM disksize | Xtra-Kernel, RvKernel | `/sys/block/zram0/disksize` | Tidak | ✅ |
+| 6 | ZRAM mm_stat (4 fields) | Xtra-Kernel | `/sys/block/zram0/mm_stat` | Tidak | ✅ |
+| 7 | Compression ratio | Xtra-Kernel | orig / compr_data_size | Tidak | ✅ |
+| 8 | ZRAM algorithm get | Xtra-Kernel | `/sys/block/zram0/comp_algorithm` | Tidak | ✅ |
+| 9 | ZRAM algorithm set | Xtra-Kernel | comp_algorithm echo | Ya | ✅ |
+| 10 | ZRAM size set | Xtra-Kernel | `swapoff` → `disksize=0` → set → `mkswap` → `swapon` | Ya | ✅ |
+| 11 | Swappiness | Xtra-Kernel, RvKernel | `/proc/sys/vm/swappiness` | Ya | ✅ |
+| 12 | Dirty ratio | Xtra-Kernel | `/proc/sys/vm/dirty_ratio` | Ya | ✅ |
+| 13 | vfs_cache_pressure | Encore, SmartPack | `/proc/sys/vm/vfs_cache_pressure` | Ya | ✅ |
+| 14 | min_free_kbytes | Xtra-Kernel | `/proc/sys/vm/min_free_kbytes` | Ya | ✅ |
+| 15 | Drop caches | Encore | `echo 3 > /proc/sys/vm/drop_caches` | Ya | ✅ |
+| 16 | ZSwap | SmartPack | `/sys/module/zswap/parameters/*` | Ya | ❌ |
 
-### 3.2 ZRAM
-| Fitur | Source | Sysfs Path | Root | Complexity |
-|-------|--------|------------|------|------------|
-| Read zram disksize | Xtra-Kernel, RvKernel | `/sys/block/zram0/disksize` | Tidak | Rendah |
-| Read zram stats | Xtra-Kernel (Rust) | `/sys/block/zram0/mm_stat` | Tidak | Rendah |
-| Compression ratio | Xtra-Kernel (Rust) | `orig_data_size / compr_data_size` | Tidak | Rendah |
-| Read current algorithm | Xtra-Kernel (Rust) | `/sys/block/zram0/comp_algorithm` → parse `[lz4]` | Tidak | Rendah |
-| List available algorithms | Xtra-Kernel (Rust) | `/sys/block/zram0/comp_algorithm` → split | Tidak | Rendah |
-| Set zram algorithm | Xtra-Kernel (RAMControlUseCase) | Echo ke comp_algorithm | Ya | Sedang |
-| Set zram disksize | Xtra-Kernel (RAMControlUseCase) | `swapoff` → `disksize=0` → set → `mkswap` → `swapon` | Ya | Tinggi |
-
-### 3.3 VM Parameters
-| Fitur | Source | Sysfs Path | Root | Complexity |
-|-------|--------|------------|------|------------|
-| Read/write swappiness | Xtra-Kernel, RvKernel | `/proc/sys/vm/swappiness` (0-200) | Ya | Rendah |
-| Read/write dirty_ratio | Xtra-Kernel | `/proc/sys/vm/dirty_ratio` | Ya | Rendah |
-| Read/write vfs_cache_pressure | Encore, SmartPack | `/proc/sys/vm/vfs_cache_pressure` | Ya | Rendah |
-| Read/write min_free_kbytes | Xtra-Kernel (RAMControlUseCase) | `/proc/sys/vm/min_free_kbytes` | Ya | Rendah |
-| Drop caches | Encore, Xtra-Kernel (GameControlUseCase) | `echo 3 > /proc/sys/vm/drop_caches` | Ya | Rendah |
+**Done: 15/16 | Missing: ZSwap parameters**
 
 ---
 
 ## 4. Thermal Management
 
-### 4.1 Thermal Zones
-| Fitur | Source | Sysfs Path | Root | Complexity |
-|-------|--------|------------|------|------------|
-| Read all thermal zones | Xtra-Kernel (Rust) | `/sys/class/thermal/thermal_zone{N}/temp` | Tidak | Rendah |
-| Zone auto-detect (CPU) | Xtra-Kernel (Rust) | Scan zones 0..9, match "cpu"/"tsens"/"pa" | Tidak | Rendah |
-| Zone auto-detect (GPU) | Xtra-Kernel (KernelRepository) | Scan zones 0..99, match "gpu"/"adreno"/"kgsl" | Tidak | Rendah |
-| Read CPU temperature | Xtra-Kernel | Primary thermal zone | Tidak | Rendah |
+| # | Fitur | Source | Sysfs Path | Root | Status |
+|---|-------|--------|------------|------|--------|
+| 1 | Thermal zones scan | Xtra-Kernel | `thermal_zone{N}/temp` | Tidak | ✅ |
+| 2 | CPU zone auto-detect | Xtra-Kernel | match "cpu"/"tsens"/"pa" | Tidak | ✅ |
+| 3 | GPU zone auto-detect | Xtra-Kernel | match "gpu"/"adreno"/"kgsl" | Tidak | ✅ |
+| 4 | Xiaomi sconfig | Xtra-Kernel | `/sys/class/thermal/thermal_message/sconfig` | Ya | ✅ |
+| 5 | MSM thermal toggle | SmartPack | `/sys/module/msm_thermal/parameters/enabled` | Ya | ✅ |
+| 6 | Simple MSM thermal | SmartPack | `/sys/module/simple_msm_thermal/parameters/enabled` | Ya | ✅ |
+| 7 | EARA thermal disable | Encore, ZKM, AZenith | `/sys/kernel/eara_thermal/enable` | Ya | ✅ |
+| 8 | FPSGO control | Xtra-Kernel | `/sys/kernel/fpsgo/common/*` | Ya | ✅ |
+| 9 | Thermal presets (5) | Xtra-Kernel | sconfig = 2/8/10/11/20 | Ya | ✅ |
+| 10 | Charge current max | SmartPack, AZenith | `/sys/class/power_supply/battery/constant_charge_current_max` | Ya | ✅ |
+| 11 | USB current max | SmartPack | `/sys/class/power_supply/usb/current_max` | Ya | ❌ |
 
-### 4.2 Thermal Profiles
-| Fitur | Source | Sysfs Path | Root | Complexity |
-|-------|--------|------------|------|------------|
-| Xiaomi sconfig | Xtra-Kernel (ThermalControlUseCase) | `/sys/class/thermal/thermal_message/sconfig` | Ya | Rendah |
-| MSM thermal toggle | SmartPack | `/sys/module/msm_thermal/parameters/enabled` | Ya | Rendah |
-| MSM thermal v2 | SmartPack | `/sys/module/msm_thermal_v2/parameters/enabled` | Ya | Rendah |
-| Simple MSM thermal | SmartPack | `/sys/module/simple_msm_thermal/parameters/enabled` | Ya | Rendah |
-| EARA thermal disable | Encore, ZKM, AZenith | `/sys/kernel/eara_thermal/enable` | Ya | Rendah |
-
-### 4.3 Thermal Presets
-| Fitur | Source | Class | Root | Complexity |
-|-------|--------|-------|------|------------|
-| Preset: Class 0 (Default) | Xtra-Kernel | `sconfig=11` | Ya | Rendah |
-| Preset: Extreme | Xtra-Kernel | `sconfig=2` (max performance) | Ya | Rendah |
-| Preset: Dynamic | Xtra-Kernel | `sconfig=10` | Ya | Rendah |
-| Preset: Incalls | Xtra-Kernel | `sconfig=8` | Ya | Rendah |
-| Preset: Thermal 20 | Xtra-Kernel | `sconfig=20` (cool) | Ya | Rendah |
+**Done: 10/11 | Missing: USB current_max**
 
 ---
 
 ## 5. Power & Battery
 
-### 5.1 Battery Status
-| Fitur | Source | Sysfs Path | Root | Complexity |
-|-------|--------|------------|------|------------|
-| Battery level | Xtra-Kernel (Rust, persistent FD) | `/sys/class/power_supply/battery/capacity` | Tidak | Rendah |
-| Battery temp | Xtra-Kernel (Rust, persistent FD) | `/sys/class/power_supply/battery/temp` (deci°C) | Tidak | Rendah |
-| Battery voltage | Xtra-Kernel (Rust, persistent FD) | `/sys/class/power_supply/battery/voltage_now` (µV) | Tidak | Rendah |
-| Battery current | Xtra-Kernel (Rust, persistent FD) | `/sys/class/power_supply/battery/current_now` (µA/mA) | Tidak | Rendah |
-| Charging status | Xtra-Kernel (Rust) | `status` → contains "Charging" | Tidak | Rendah |
-| Battery health | Xtra-Kernel (Rust) | `/sys/class/power_supply/battery/health` | Tidak | Rendah |
-| Cycle count | Xtra-Kernel (Rust) | `/sys/class/power_supply/{bms,battery,bat}/cycle_count` | Tidak | Rendah |
-| Capacity level (health %) | Xtra-Kernel (Rust) | `charge_full / charge_full_design * 100` | Tidak | Rendah |
+| # | Fitur | Source | Path | Root | Status |
+|---|-------|--------|------|------|--------|
+| 1 | Battery level | Xtra-Kernel | `/sys/class/power_supply/battery/capacity` | Tidak | ✅ |
+| 2 | Battery temp | Xtra-Kernel | `/sys/class/power_supply/battery/temp` | Tidak | ✅ |
+| 3 | Battery voltage | Xtra-Kernel | `/sys/class/power_supply/battery/voltage_now` | Tidak | ✅ |
+| 4 | Battery current | Xtra-Kernel | `/sys/class/power_supply/battery/current_now` | Tidak | ✅ |
+| 5 | Charging status | Xtra-Kernel | status contains "Charging" | Tidak | ✅ |
+| 6 | Battery health | Xtra-Kernel | `/sys/class/power_supply/battery/health` | Tidak | ✅ |
+| 7 | Cycle count | Xtra-Kernel | `/sys/class/power_supply/{bms,battery,bat}/cycle_count` | Tidak | ✅ |
+| 8 | Capacity level | Xtra-Kernel | charge_full / charge_full_design * 100 | Tidak | ✅ |
+| 9 | Bypass charging | AZenith | Auto-discovery: 6+ nodes | Ya | ✅ |
+| 10 | Charging limit | Xtra-Kernel | `/sys/class/power_supply/battery/charge_control_limit` | Ya | ❌ |
+| 11 | Wakeup count | Xtra-Kernel | `/sys/power/wakeup_count` | Tidak | ⚠️ |
+| 12 | Suspend count | Xtra-Kernel | `/sys/kernel/debug/suspend_stats/success` | Tidak | ❌ |
+| 13 | constant_charge_current_max | SmartPack | `/sys/class/power_supply/battery/constant_charge_current_max` | Ya | ❌ |
+| 14 | restricted_current | AZenith | `/sys/class/qcom-battery/restricted_current` | Ya | ❌ |
 
-### 5.2 Charging Control
-| Fitur | Source | Sysfs Path | Root | Complexity |
-|-------|--------|------------|------|------------|
-| Charge current max | SmartPack, AZenith | `/sys/class/power_supply/battery/constant_charge_current_max` | Ya | Rendah |
-| USB current max | SmartPack | `/sys/class/power_supply/usb/current_max` | Ya | Rendah |
-| Bypass charging | AZenith | Auto-discovery: 60+ nodes, measure 10s | Ya | Tinggi |
-| Bypass (Qualcomm) | AZenith, Xtra-Kernel (FunctionalRom) | `/sys/class/power_supply/battery/input_suspend` | Ya | Rendah |
-| Bypass (qcom-battery) | AZenith | `/sys/class/qcom-battery/bypass_charging_enable` | Ya | Rendah |
-| Charging limit | Xtra-Kernel (FunctionalRom) | `/sys/class/power_supply/battery/charge_control_limit` | Ya | Rendah |
-
-### 5.3 Power Stats
-| Fitur | Source | Path | Root | Complexity |
-|-------|--------|------|------|------------|
-| Wakeup count | Xtra-Kernel (Rust) | `/sys/power/wakeup_count` | Tidak | Rendah |
-| Suspend count | Xtra-Kernel (Rust) | `/sys/kernel/debug/suspend_stats/success` | Tidak | Rendah |
+**Done: 9/14 | Missing: charge_control_limit, suspend_count, restricted_current, charge_current + USB current | Partial: wakeup_count**
 
 ---
 
 ## 6. I/O Scheduler
 
-| Fitur | Source | Sysfs Path | Root | Complexity |
-|-------|--------|------------|------|------------|
-| List I/O schedulers | SmartPack, RvKernel | `/sys/block/{sda,mmcblk0}/queue/scheduler` | Tidak | Rendah |
-| Set I/O scheduler | SmartPack, RvKernel | Echo ke scheduler | Ya | Rendah |
-| Read-ahead kb | Encore, SmartPack | `/sys/block/{sda,mmcblk0}/queue/read_ahead_kb` | Ya | Rendah |
-| NR requests | Encore, SmartPack | `/sys/block/{sda,mmcblk0}/queue/nr_requests` | Ya | Rendah |
-| I/O stats toggle | SmartPack | `/sys/block/{sda,mmcblk0}/queue/iostats` | Ya | Rendah |
+| # | Fitur | Source | Path | Root | Status |
+|---|-------|--------|------|------|--------|
+| 1 | List I/O schedulers | SmartPack, RvKernel | `/sys/block/{device}/queue/scheduler` | Tidak | ✅ |
+| 2 | Set I/O scheduler | SmartPack, RvKernel | Echo ke scheduler | Ya | ✅ |
+| 3 | Read-ahead kb | Encore, SmartPack | `read_ahead_kb` | Ya | ✅ |
+| 4 | NR requests | Encore, SmartPack | `nr_requests` | Ya | ✅ |
+| 5 | I/O stats toggle | SmartPack | `iostats` | Ya | ✅ |
+
+**Done: 5/5 | Complete.**
 
 ---
 
 ## 7. Scheduler & CPU Tuning
 
-| Fitur | Source | Sysfs Path | Root | Complexity |
-|-------|--------|------------|------|------------|
-| Sched features | Encore | `/sys/kernel/debug/sched_features` (NEXT_BUDDY, NO_TTWU_QUEUE) | Ya | Sedang |
-| Schedtune prefer_idle | Encore | `/dev/stune/top-app/schedtune.prefer_idle` | Ya | Rendah |
-| Schedtune boost | Encore | `/dev/stune/top-app/schedtune.boost` | Ya | Rendah |
-| Sched lib name | Encore | `/proc/sys/kernel/sched_lib_name` | Ya | Rendah |
-| Sched lib mask force | Encore | `/proc/sys/kernel/sched_lib_mask_force` | Ya | Rendah |
-| Split lock mitigate | Encore | `/proc/sys/kernel/split_lock_mitigate` | Ya | Rendah |
-| BORE scheduler | RvKernel | `/proc/sys/kernel/sched_bore` / `sched_burst_*` | Ya | Sedang |
-| uclamp settings | RvKernel | `/proc/sys/kernel/sched_util_clamp_{min,max,min_rt_default}` | Ya | Sedang |
-| Sched autogroup | RvKernel | `/proc/sys/kernel/sched_autogroup_enabled` | Ya | Rendah |
-| CPU EAS enable | AZenith | `/sys/devices/system/cpu/eas/enable` | Ya | Rendah |
-| CPU DCVS disable | Encore | `/sys/devices/system/cpu/cpu{N}/core_ctrl/cpudcvs_disable` | Ya | Rendah |
+| # | Fitur | Source | Path | Root | Status |
+|---|-------|--------|------|------|--------|
+| 1 | Sched features read | Encore | `/sys/kernel/debug/sched_features` | Ya | ✅ |
+| 2 | Stune prefer_idle | Encore | `/dev/stune/top-app/schedtune.prefer_idle` | Ya | ✅ |
+| 3 | Stune boost | Encore | `/dev/stune/top-app/schedtune.boost` | Ya | ✅ |
+| 4 | Split lock mitigate | Encore | `/proc/sys/kernel/split_lock_mitigate` | Ya | ✅ |
+| 5 | BORE scheduler | RvKernel | `/proc/sys/kernel/sched_bore` | Ya | ✅ |
+| 6 | uClamp min/max | RvKernel | `sched_util_clamp_{min,max}` | Ya | ✅ |
+| 7 | VFS cache pressure | Encore | `/proc/sys/vm/vfs_cache_pressure` | Ya | ✅ |
+| 8 | Drop caches | Encore | `/proc/sys/vm/drop_caches` | Ya | ✅ |
+| 9 | Overcommit ratio | — | `/proc/sys/vm/overcommit_ratio` | Ya | ✅ |
+| 10 | Sched lib name | Encore | `/proc/sys/kernel/sched_lib_name` | Ya | ✅ |
+| 11 | Sched lib mask force | Encore | `/proc/sys/kernel/sched_lib_mask_force` | Ya | ✅ |
+| 12 | Sched autogroup | RvKernel | `sched_autogroup_enabled` | Ya | ✅ |
+| 13 | Sched burst params (3) | RvKernel | `sched_burst_update_period`, `sched_burst_smooth_up`, `sched_burst_graham` | Ya | ✅ |
+| 14 | sched_feature toggle | Encore | NExT_BUDDY, NO_TTWU_QUEUE | Ya | ⚠️ |
+| 15 | uclamp min_rt_default | RvKernel | `sched_util_clamp_min_rt_default` | Ya | ✅ |
+
+**Done: 14/15 | Partial: sched_feature toggle**
 
 ---
 
 ## 8. Network
 
-| Fitur | Source | Sysfs Path | Root | Complexity |
-|-------|--------|------------|------|------------|
-| TCP congestion control | RvKernel, Xtra-Kernel | `/proc/sys/net/ipv4/tcp_congestion_control` | Ya | Rendah |
-| Available congestion algorithms | RvKernel | `/proc/sys/net/ipv4/tcp_available_congestion_control` | Tidak | Rendah |
-| WireGuard version | RvKernel | `/sys/module/wireguard/version` | Tidak | Rendah |
+| # | Fitur | Source | Path | Root | Status |
+|---|-------|--------|------|------|--------|
+| 1 | TCP congestion read | RvKernel | `/proc/sys/net/ipv4/tcp_congestion_control` | Tidak | ✅ |
+| 2 | TCP congestion set | RvKernel | echo ke path | Ya | ✅ |
+| 3 | Available congestion | RvKernel | `tcp_available_congestion_control` | Tidak | ✅ |
+| 4 | DMESG restrict | RvKernel | `/proc/sys/kernel/dmesg_restrict` | Ya | ✅ |
+| 5 | Kernel version | RvKernel | `/proc/version` | Tidak | ✅ |
+| 6 | WireGuard version | RvKernel | `/sys/module/wireguard/version` | Tidak | ❌ |
+
+**Done: 5/6 | Missing: WireGuard version**
 
 ---
 
-## 9. Display
+## 9. Display & Wake
 
-| Fitur | Source | Method | Root | Complexity |
-|-------|--------|--------|------|------------|
-| Refresh rate control | AZenith, Xtra-Kernel (FunctionalRom) | `settings put system peak_refresh_rate {hz}` | Ya | Rendah |
-| Brightness unlock | Xtra-Kernel (FunctionalRom) | `/sys/class/backlight/*/max_brightness` (4095=1000nits) | Ya | Rendah |
-| KCAL color control | SmartPack | `/sys/devices/platform/kcal_ctrl.0/kcal` | Ya | Rendah |
-| Backlight dimmer | SmartPack | `/sys/devices/virtual/misc/backlightdimmer/*` | Ya | Rendah |
-| DPI override | DPIS | Per-app via Xposed hooks | Ya (Xposed) | Tinggi |
-| Font scaling | DPIS | Per-app via DisplayMetrics hooks | Ya (Xposed) | Tinggi |
+| # | Fitur | Source | Path | Root | Status |
+|---|-------|--------|------|------|--------|
+| 1 | Backlight brightness | — | `/sys/class/backlight/panel0-backlight/brightness` | Ya | ✅ |
+| 2 | KCAL color control | SmartPack | `/sys/devices/platform/kcal_ctrl.0/kcal` | Ya | ✅ |
+| 3 | Backlight dimmer | SmartPack | `/sys/devices/virtual/misc/backlightdimmer/enabled` | Ya | ✅ |
+| 4 | DPI override (global) | DPIS | `wm density` | Ya | ✅ |
+| 5 | Font scaling (global) | DPIS | `settings put system font_scale` | Ya | ✅ |
+| 6 | Per-app DPI (no flicker) | DPIS | Xposed hooks on Display.getMetrics() | Ya (Xposed) | ❌ |
+| 7 | DT2W (5 paths) | SmartPack | `/sys/touchpanel/double_tap`, etc | Ya | ✅ |
+| 8 | Speaker boost | — | `/sys/kernel/sound_control_3/speaker_boost` | Ya | ✅ |
+| 9 | Headphone gain | — | `/sys/kernel/sound_control_3/gain_control` | Ya | ✅ |
+| 10 | Mic boost | — | `/sys/kernel/sound_control_3/mic_boost` | Ya | ✅ |
+| 11 | Resolution override | — | `wm size` | Ya | ✅ |
+
+**Done: 10/11 | Missing: Per-app DPI (leftover, needs Xposed)**
 
 ---
 
 ## 10. Gaming Features
 
-| Fitur | Source | Method | Root | Complexity |
-|-------|--------|--------|------|------------|
-| Foreground app detection | AZenith, Encore | `dumpsys window displays` parse OR `IActivityTaskManager` | Tidak | Sedang |
-| Game list management | Encore | JSON gamelist `azenithApplist.json` | Tidak | Rendah |
-| Per-game profiles | AZenith, Encore | perf_lite_mode, DND, renderer, refresh_rate | Ya | Sedang |
-| DND on gaming | AZenith, Xtra-Kernel (GameControlUseCase) | `settings put global heads_up_notifications_enabled 0` | Ya | Rendah |
-| Monster Mode (max perf) | Xtra-Kernel (GameControlUseCase) | CPU max + GPU force + RAM clear | Ya | Tinggi |
-| Game Boost | Xtra-Kernel (GameControlUseCase) | Performance + Dynamic thermal + Monster Mode | Ya | Sedang |
-| RAM clear | Xtra-Kernel (GameControlUseCase) | `sync` → `drop_caches` → `am kill-all` | Ya | Rendah |
-| FPS monitor | ZKM | Overlay service | Ya | Sedang |
-| Esports mode | Xtra-Kernel | DND + performance + touch | Ya | Sedang |
-| GPU renderer switch | SkiaShift, AZenith | `debug.hwui.renderer` (skiavk/skiagl) | Ya (LSPosed) | Sedang |
-| Game preload | AZenith | `madvise` touch game .so libs to page cache | Ya | Sedang |
-| MLBB special handler | AZenith | PID tracking subprocess `:UnityKillsMe` | Ya | Rendah |
+| # | Fitur | Source | Method | Root | Status |
+|---|-------|--------|--------|------|--------|
+| 1 | Foreground app detect | AZenith, Encore | `dumpsys window` | Tidak | ✅ |
+| 2 | Per-game profiles | AZenith, Encore | ProfileManager + foreground trigger | Ya | ✅ |
+| 3 | DND on gaming | AZenith | `settings put heads_up_notifications_enabled 0` | Ya | ✅ |
+| 4 | Monster Mode | Xtra-Kernel | CPU max + GPU force + RAM clear | Ya | ✅ |
+| 5 | RAM clear | Xtra-Kernel | `sync` → `drop_caches` → `am kill-all` | Ya | ✅ |
+| 6 | GPU renderer switch | SkiaShift | `resetprop debug.hwui.renderer` | Ya | ✅ |
+| 7 | Immersive mode | AZenith | `settings put policy_control` | Ya | ✅ |
+| 8 | FPS overlay | ZKM | Overlay service | Ya | ❌ |
+| 9 | Game preload (madvise) | AZenith | madvise touch game libs | Ya | ❌ |
+| 10 | MLBB special handler | AZenith | PID tracking `UnityKillsMe` | Ya | ❌ |
+| 11 | Esports mode | Xtra-Kernel | DND + performance + touch | Ya | ⚠️ |
+
+**Done: 7/11 | Missing: FPS overlay, game preload, MLBB handler | Partial: esports mode**
 
 ---
 
 ## 11. Spoofing & Hooks
 
-| Fitur | Source | Method | Root | Complexity |
-|-------|--------|--------|------|------------|
-| Device model spoof | COPG | `env->SetStaticObjectField` on `android.os.Build` | Ya (Zygisk) | Sedang |
-| CPU info spoof | COPG | `mount --bind <spoof> /proc/cpuinfo` | Ya (Zygisk) | Sedang |
-| COW property spoof | COPG | `mmap(MAP_PRIVATE|MAP_FIXED)` on `/dev/__properties__` | Ya (Zygisk) | Tinggi |
-| Android ID forge | COPG | Forge `Settings$Secure.sNameValueCache` in ART heap | Ya (Zygisk) | Tinggi |
-| System property hook | SkiaShift | ByteHook (PLT) + ShadowHook (inline), 6 functions | Ya (LSPosed) | Tinggi |
-| Display hook | DPIS | Xposed `Display.getMetrics()`, `getSize()`, etc | Ya (Xposed) | Sedang |
-| Font hook | DPIS | `TextView.setTextSize()`, `Paint.setTextSize()` | Ya (Xposed) | Sedang |
+| # | Fitur | Source | Method | Root | Status |
+|---|-------|--------|--------|------|--------|
+| 1 | Device model spoof | COPG | `resetprop` 16 properties | Ya | ✅ |
+| 2 | CPU info spoof | COPG | `mount --bind /proc/cpuinfo` | Ya | ✅ |
+| 3 | Per-process COW prop | COPG | `mmap(MAP_PRIVATE|MAP_FIXED)` via ZygiskNext companion | Ya (Tier 4) | 🔧 pending |
+| 4 | Android ID forge | COPG | ART heap modification via ZygiskNext | Ya (Tier 4) | 🔧 pending |
+| 5 | Per-app renderer (perf) | SkiaShift | 6 sysprop hooks via Vector module | Ya (Tier 5) | 🔧 pending |
+| 6 | Per-app DPI (perf) | DPIS | Display + TextView hooks via Vector module | Ya (Tier 5) | 🔧 pending |
+| 7 | Generate Magisk module | — | `generate_magisk_module()` | Ya | ✅ |
+
+**Done: 3/7 | Pending: 3 per-process features (Vector/ZygiskNext modules, unlockable) | Missing: 0**
 
 ---
 
 ## 12. Root & IPC
 
-| Fitur | Source | Method | Root | Complexity |
-|-------|--------|--------|------|------------|
-| Root detection | Xtra-Kernel (RootManager) | `Shell.getShell().isRoot` (libsu) | Ya | Rendah |
-| Shell command execution | Xtra-Kernel (RootManager) | `Shell.cmd(command).exec()` | Ya | Rendah |
-| Shizuku Binder IPC | Shizuku | ContentProvider bridge → Binder delivery | ADB/Root | Tinggi |
-| Shizuku BinderWrapper | Shizuku-API | Tunnel arbitrary Binder calls through privileged process | ADB/Root | Tinggi |
-| UserService (daemon) | Shizuku | `app_process` spawn, runs as root/shell UID | Ya | Tinggi |
-| KernelSU module install | Xtra-Kernel (RootManager) | `ksud module install` (fallback: magisk) | Ya | Rendah |
+| # | Fitur | Source | Method | Root | Status |
+|---|-------|--------|--------|------|--------|
+| 1 | Root detection | Xtra-Kernel | `file_exists` kernelsu/magisk | Tidak | ✅ |
+| 2 | Shell command exec | Xtra-Kernel | Rust sysfs::write via libc | Ya | ✅ |
+| 3 | Shizuku IPC | Shizuku | ContentProvider → Binder | ADB/Root | ✅ |
+| 4 | KernelSU module install | Xtra-Kernel | `ksud module install` | Ya | ⚠️ |
+| 5 | UserService AIDL | Shizuku | `app_process` daemon | Ya | ❌ |
+| 6 | Framework detection | Xtra-Kernel | Tier 1-5: KSU/Magisk/Zygisk/LSPosed | Tidak | ✅ |
+
+**Done: 4/6 | Missing: UserService AIDL, KernelSU module install not wrapped**
 
 ---
 
 ## 13. Kernel Parameters
 
-| Fitur | Source | Sysfs Path | Root | Complexity |
-|-------|--------|------------|------|------------|
-| SELinux status | Xtra-Kernel | `getenforce` | Tidak | Rendah |
-| DMESG restrict | RvKernel | `/proc/sys/kernel/dmesg_restrict` | Ya | Rendah |
-| Printk level | RvKernel | `/proc/sys/kernel/printk` | Ya | Rendah |
-| Kernel version | RvKernel | `/proc/version` | Tidak | Rendah |
+| # | Fitur | Source | Path | Root | Status |
+|---|-------|--------|------|------|--------|
+| 1 | SELinux status | Xtra-Kernel | `getenforce` command | Tidak | ✅ |
+| 2 | Kernel version | RvKernel | `/proc/version` | Tidak | ✅ |
+| 3 | DMESG restrict | RvKernel | `/proc/sys/kernel/dmesg_restrict` | Ya | ✅ |
+| 4 | Printk level | RvKernel | `/proc/sys/kernel/printk` | Ya | ❌ |
+
+**Done: 3/4 | Missing: printk level**
 
 ---
 
 ## 14. Apply-on-Boot & Profiles
 
-| Fitur | Source | Method | Root | Complexity |
-|-------|--------|--------|------|------------|
-| Set-on-boot per subsystem | SmartPack, Xtra-Kernel | JSON DB → replayed via BootReceiver | Ya | Sedang |
-| Profile: Performance | Encore, Xtra-Kernel | Max CPU/GPU/IO, min thermal | Ya | Rendah |
-| Profile: Balance | Encore, Xtra-Kernel | Default governors, moderate | Ya | Rendah |
-| Profile: Powersave | Encore, Xtra-Kernel | Min freq, max thermal, power save | Ya | Rendah |
-| Profile: Game/Monster | Xtra-Kernel, AZenith | Performance + DND + GPU force | Ya | Rendah |
-| TOML config import/export | Xtra-Kernel (TuningViewModel) | Config → TOML file | Tidak | Rendah |
-| Set-on-boot via init.d | SmartPack, Xtra-Kernel | Init script on boot | Ya | Rendah |
+| # | Fitur | Source | Method | Root | Status |
+|---|-------|--------|--------|------|--------|
+| 1 | Boot config save/load | SmartPack, Xtra-Kernel | JSON → `/data/local/tmp/` | Ya | ✅ |
+| 2 | Boot config apply | SmartPack, Xtra-Kernel | Replay renderer/cpu/gpu/thermal/io/tcp | Ya | ✅ |
+| 3 | Per-app profiles | AZenith, Encore | ProfileManager + foreground trigger | Ya | ✅ |
+| 4 | Profile: Performance | Encore, Xtra-Kernel | Max CPU/GPU/IO | Ya | ✅ |
+| 5 | Profile: Balance | Encore, Xtra-Kernel | Default governors | Ya | ✅ |
+| 6 | Profile: Powersave | Encore, Xtra-Kernel | Min freq + max thermal | Ya | ✅ |
+| 7 | Profile: Game/Monster | Xtra-Kernel | GPU force + DND + RAM clear | Ya | ✅ |
+| 8 | TOML config import/export | Xtra-Kernel | Config → TOML file | Tidak | ❌ |
+| 9 | init.d support | SmartPack | Init script on boot | Ya | ❌ |
+
+**Done: 7/9 | Missing: TOML config export, init.d suppor**
 
 ---
 
-## 15. Cross-Source Comparison (POCO X3 NFC Priority)
+## 15. Feature Checker & Logging
 
-| Komponen | Best Source | Alasan |
-|----------|-------------|--------|
-| Rust sysfs SDK | Xtra-Kernel | Already written, 40 JNI functions, persistent FDs |
-| Kotlin JNI bridge | Xtra-Kernel | NativeLib.kt pattern — safe, nullable, try/catch |
-| Sysfs catalog | SmartPack | Most comprehensive (385 files), battle-tested |
-| GPU Bus DCVS | ZKM | AdrenoUtils — IPC-first, brute-force boundary setter |
-| GPU power levels | Encore | 6 KGSL force params (clk/bus/rail/nap/split/throttle) |
-| CPU hotplug | SmartPack | 12+ drivers supported (intelliplug, alucard, etc.) |
-| Thermal management | AZenith | sconfig + EARA + daemon-based game detection |
-| Bypass charging | AZenith | 60+ nodes auto-discovery |
-| Game detection | AZenith + Encore | dumpsys + IActivityTaskManager + PID tracking |
-| Device spoofing | COPG | Build fields + mount bind + COW properties |
-| GPU renderer switch | SkiaShift | 6 hooked system property functions |
-| DPI/display override | DPIS | DisplayMetrics hooks + font scaling |
-| Root IPC | Shizuku | BinderWrapper tunnels arbitrary calls |
-| Material 3 UI | RvKernel | Dynamic color (Monet), clean ViewModel pattern |
-| Preferences | Xtra-Kernel | DataStore + SharedPrefs (Xposed cross-read) |
+| # | Fitur | Source | Method | Root | Status |
+|---|-------|--------|--------|------|--------|
+| 1 | Single feature verify | Xtra-Kernel | write + readback verification | Ya | ✅ |
+| 2 | All features verify | — | batch run verifyFeature() | Ya | ✅ |
+| 3 | Checker log | — | `/data/adb/farewell_logs/checker.log` | Ya | ✅ |
+| 4 | Logcat parser | — | parse crash patterns | Ya | ✅ |
+| 5 | Log export (tar.gz) | — | archive + compress | Ya | ✅ |
+| 6 | LogFox crash logging | LogFox | Logcat monitoring + export | Tidak | ✅ |
+
+**Done: 6/6 | Complete.**
+
+---
+
+## Summary
+
+| Kategori | Total | Done | Missing | Persentase |
+|----------|-------|------|---------|-----------|
+| 1. CPU & Governor | 27 | 19 | 8 | 70% |
+| 2. GPU Control | 21 | 19 | 2 | 90% |
+| 3. Memory & ZRAM | 16 | 15 | 1 | 94% |
+| 4. Thermal | 11 | 10 | 1 | 91% |
+| 5. Power & Battery | 14 | 9 | 5 | 64% |
+| 6. I/O Scheduler | 5 | 5 | 0 | 100% |
+| 7. Scheduler & CPU | 15 | 14 | 1 | 93% |
+| 8. Network | 6 | 5 | 1 | 83% |
+| 9. Display & Wake | 11 | 10 | 1 | 91% |
+| 10. Gaming | 11 | 7 | 4 | 64% |
+| 11. Spoofing & Hooks | 7 | 3 | 4 | 43% |
+| 12. Root & IPC | 6 | 4 | 2 | 67% |
+| 13. Kernel Params | 4 | 3 | 1 | 75% |
+| 14. Apply-on-Boot | 9 | 7 | 2 | 78% |
+| 15. Checker & Logs | 6 | 6 | 0 | 100% |
+| **TOTAL** | **169** | **136** | **33** | **80%** |
+
+### Prioritas Implementasi
+
+**Easy (no system dep, straight sysfs writes):**
+1. CPU hotplug drivers (msm_hotplug, intelliplug, alucard, autosmp)
+2. charge_control_limit + constant_charge_current_max
+3. Printk level
+4. WireGuard version
+5. ZSwap parameters
+6. FPS overlay service
+7. TOML config export
+
+**Medium (new Kotlin services):**
+8. Kernel flasher (ZKM approach)
+9. CPU time-in-state stats
+10. USB current_max
+
+**Hard (needs Zygisk/LSPosed):**
+11. Per-process COW spoof
+12. Per-app renderer/Dpi
+13. Per-app mount namespace
+14. Android ID forge
+15. Shizuku UserService AIDL

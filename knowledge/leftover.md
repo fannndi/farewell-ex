@@ -1,7 +1,10 @@
 # Leftover Features — Implementation Path (v2.0)
 
-> **Status:** 5/6 features now have code — need ZygiskNext/Vector build + install to activate.
-> **Deploy:** KernelSU modules di `zygisk/` dan `vector/`.
+> **Status:** 5/6 features require ZygiskNext + LSPosed/Vector — install separately.
+> **farewell-ex** hanya detect + provide config UI saat framework tersedia.
+> **ZygiskNext:** github.com/Dr-TSNG/ZygiskNext
+> **LSPosed:** github.com/LSPosed/LSPosed
+> **Vector:** github.com/JingMatrix/Vector
 
 ---
 

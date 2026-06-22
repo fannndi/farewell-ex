@@ -6,7 +6,7 @@ use std::time::Duration;
 use crate::renderer;
 use crate::spoof;
 use crate::display_control;
-use crate::sysfs;
+use crate::sysfs::{self, SysfsError, SysfsResult};
 
 const PROFILE_PATH: &str = "/data/local/tmp/farewell_profiles.json";
 const BOOT_CONFIG_PATH: &str = "/data/local/tmp/farewell_boot_config.json";
@@ -185,59 +185,50 @@ impl ProfileManager {
         self.current_pkg = pkg.to_string();
 
         if let Some(profile) = self.profiles.get(pkg) {
-            // Renderer
             if profile.renderer != "default" && profile.renderer != self.current_renderer {
-                renderer::set_renderer(&profile.renderer);
+                let _ = renderer::set_renderer(&profile.renderer);
                 self.current_renderer = profile.renderer.clone();
             }
-            // Density
             if profile.density > 0 && profile.density != self.current_density {
-                display_control::set_global_density(profile.density);
+                let _ = display_control::set_global_density(profile.density);
                 self.current_density = profile.density;
             }
-            // Font scale
             if profile.font_scale != 1.0 && profile.font_scale != self.current_font_scale {
-                display_control::set_global_font_scale(profile.font_scale);
+                let _ = display_control::set_global_font_scale(profile.font_scale);
                 self.current_font_scale = profile.font_scale;
             }
-            // Device spoof
             if profile.device_profile != "default" && profile.device_profile != self.current_device_profile {
-                spoof::apply_device_profile(&profile.device_profile);
+                let _ = spoof::apply_device_profile(&profile.device_profile);
                 self.current_device_profile = profile.device_profile.clone();
             }
-            // CPU governor
             if profile.cpu_governor != "default" {
-                crate::cpu::set_governor(&profile.cpu_governor);
+                let _ = crate::cpu::set_governor(&profile.cpu_governor);
             }
-            // GPU power level
             if profile.gpu_max_pwrlevel >= 0 {
-                crate::gpu::set_gpu_power_levels(0, profile.gpu_max_pwrlevel);
+                let _ = crate::gpu::set_gpu_power_levels(0, profile.gpu_max_pwrlevel);
             }
-            // Thermal preset
             if profile.thermal_preset != "default" {
-                crate::thermal::set_thermal_sconfig(&profile.thermal_preset);
+                let _ = crate::thermal::set_thermal_sconfig(&profile.thermal_preset);
             }
         } else {
-            // No profile for this app — restore defaults
             self.restore_defaults();
         }
     }
 
     pub fn restore_defaults(&mut self) {
         if self.current_renderer != "default" {
-            // Don't force renderer back, let user's global setting stand
             self.current_renderer = "default".to_string();
         }
         if self.current_density != 0 && self.current_density != self.default_density {
-            display_control::reset_global_density();
+            let _ = display_control::reset_global_density();
             self.current_density = 0;
         }
         if self.current_font_scale != 1.0 {
-            display_control::set_global_font_scale(self.default_font_scale);
+            let _ = display_control::set_global_font_scale(self.default_font_scale);
             self.current_font_scale = self.default_font_scale;
         }
         if self.current_device_profile != "default" {
-            spoof::restore_all_spoofs();
+            let _ = spoof::restore_all_spoofs();
             self.current_device_profile = "default".to_string();
         }
     }
@@ -370,19 +361,21 @@ pub fn get_framework_status() -> String {
 ///
 /// **Root:** Not required (ADB settings)
 /// **Returns:** `true` if settings put succeeded
-pub fn set_dnd_enabled(enabled: bool) -> bool {
+pub fn set_dnd_enabled(enabled: bool) -> SysfsResult<bool> {
     let val = if enabled { "0" } else { "1" };
-    Command::new("settings").args(["put", "global", "heads_up_notifications_enabled", val]).status().is_ok()
+    if Command::new("settings").args(["put", "global", "heads_up_notifications_enabled", val]).status().is_ok() { Ok(true) }
+    else { Err(SysfsError::IoError("settings put heads_up_notifications_enabled failed".to_string())) }
 }
 
 /// Enable/disable immersive mode for a package.
 ///
 /// **Root:** Not required (ADB settings)
 /// **Returns:** `true` if settings put succeeded
-pub fn set_immersive_mode(pkg: &str, enabled: bool) -> bool {
+pub fn set_immersive_mode(pkg: &str, enabled: bool) -> SysfsResult<bool> {
     let mode = if enabled { "immersive.full=" } else { "" };
     let val = if enabled { format!("{}{}", mode, pkg) } else { "".to_string() };
-    Command::new("settings").args(["put", "global", "policy_control", &val]).status().is_ok()
+    if Command::new("settings").args(["put", "global", "policy_control", &val]).status().is_ok() { Ok(true) }
+    else { Err(SysfsError::IoError("settings put policy_control failed".to_string())) }
 }
 
 /// Drop caches and kill background apps.
@@ -398,16 +391,18 @@ pub fn drop_caches_and_kill() -> bool {
 ///
 /// **Root:** Not required (ADB settings)
 /// **Returns:** `true` if settings put succeeded
-pub fn set_screen_brightness(value: i32) -> bool {
-    Command::new("settings").args(["put", "system", "screen_brightness", &value.to_string()]).status().is_ok()
+pub fn set_screen_brightness(value: i32) -> SysfsResult<bool> {
+    if Command::new("settings").args(["put", "system", "screen_brightness", &value.to_string()]).status().is_ok() { Ok(true) }
+    else { Err(SysfsError::IoError("settings put screen_brightness failed".to_string())) }
 }
 
 /// Set screen brightness to manual mode.
 ///
 /// **Root:** Not required (ADB settings)
 /// **Returns:** `true` if settings put succeeded
-pub fn set_screen_brightness_mode_manual() -> bool {
-    Command::new("settings").args(["put", "system", "screen_brightness_mode", "0"]).status().is_ok()
+pub fn set_screen_brightness_mode_manual() -> SysfsResult<bool> {
+    if Command::new("settings").args(["put", "system", "screen_brightness_mode", "0"]).status().is_ok() { Ok(true) }
+    else { Err(SysfsError::IoError("settings put screen_brightness_mode failed".to_string())) }
 }
 
 // ==================== Apply-on-Boot ====================
@@ -416,8 +411,9 @@ pub fn set_screen_brightness_mode_manual() -> bool {
 ///
 /// **Root:** Required
 /// **Returns:** `true` if file was written
-pub fn save_boot_config(config: &str) -> bool {
-    std::fs::write(BOOT_CONFIG_PATH, config).is_ok()
+pub fn save_boot_config(config: &str) -> SysfsResult<bool> {
+    if std::fs::write(BOOT_CONFIG_PATH, config).is_ok() { Ok(true) }
+    else { Err(SysfsError::IoError(format!("write {} failed", BOOT_CONFIG_PATH))) }
 }
 
 /// Load boot config JSON.
@@ -432,25 +428,25 @@ pub fn load_boot_config() -> String {
 ///
 /// **Root:** Required
 /// **Returns:** `true` if config parsed and applied
-pub fn apply_boot_config() -> bool {
+pub fn apply_boot_config() -> SysfsResult<bool> {
     let config = load_boot_config();
-    if config == "{}" { return false; }
+    if config == "{}" { return Err(SysfsError::NotFound("boot config not found".to_string())); }
     match serde_json::from_str::<BootConfig>(&config) {
         Ok(cfg) => {
-            if cfg.renderer != "default" { renderer::set_renderer(&cfg.renderer); }
-            if cfg.cpu_governor != "default" { crate::cpu::set_governor(&cfg.cpu_governor); }
-            if cfg.gpu_max_pwrlevel >= 0 { crate::gpu::set_gpu_power_levels(0, cfg.gpu_max_pwrlevel); }
-            if cfg.thermal_preset != "default" { crate::thermal::set_thermal_sconfig(&cfg.thermal_preset); }
-            if cfg.swappiness > 0 { crate::memory::set_swappiness(cfg.swappiness); }
+            if cfg.renderer != "default" { renderer::set_renderer(&cfg.renderer)?; }
+            if cfg.cpu_governor != "default" { crate::cpu::set_governor(&cfg.cpu_governor)?; }
+            if cfg.gpu_max_pwrlevel >= 0 { crate::gpu::set_gpu_power_levels(0, cfg.gpu_max_pwrlevel)?; }
+            if cfg.thermal_preset != "default" { crate::thermal::set_thermal_sconfig(&cfg.thermal_preset)?; }
+            if cfg.swappiness > 0 { crate::memory::set_swappiness(cfg.swappiness)?; }
             if cfg.io_scheduler != "default" {
                 if let Some(dev) = &cfg.io_device {
-                    crate::io::set_io_scheduler(dev, &cfg.io_scheduler);
+                    crate::io::set_io_scheduler(dev, &cfg.io_scheduler)?;
                 }
             }
-            if cfg.tcp_congestion != "default" { crate::network::set_tcp_congestion(&cfg.tcp_congestion); }
-            true
+            if cfg.tcp_congestion != "default" { crate::network::set_tcp_congestion(&cfg.tcp_congestion)?; }
+            Ok(true)
         }
-        Err(_) => false,
+        Err(e) => Err(SysfsError::ParseError(format!("boot config parse: {}", e))),
     }
 }
 
@@ -682,5 +678,121 @@ mod tests {
     #[test]
     fn test_monitor_interval_const() {
         assert_eq!(MONITOR_INTERVAL_MS, 500);
+    }
+
+    #[test]
+    fn test_extract_package_edge_cases() {
+        assert_eq!(extract_package(""), "unknown");
+        assert_eq!(extract_package("com.example.app"), "unknown");
+        assert_eq!(extract_package("Process: "), "unknown");
+        assert_eq!(extract_package("Process: , PID: 1"), "");
+    }
+
+    #[test]
+    fn test_has_excessive_failures_early_reset() {
+        let mut count = 0u32;
+        // Simulate 12 failures (2 full cycles)
+        for _ in 0..5 { has_excessive_failures(&mut count); }
+        assert!(has_excessive_failures(&mut count)); // 6th → true, reset to 0
+        assert_eq!(count, 0);
+        for _ in 0..5 { has_excessive_failures(&mut count); }
+        assert!(has_excessive_failures(&mut count)); // 6th again
+        assert_eq!(count, 0);
+    }
+
+    #[test]
+    fn test_should_run_fstrim_boundary() {
+        let mut last = 0u64;
+        // First call always true
+        assert!(should_run_fstrim(&mut last));
+        // Immediately after, should be false
+        assert!(!should_run_fstrim(&mut last));
+    }
+
+    #[test]
+    fn test_boot_config_empty_io_device() {
+        let cfg = BootConfig {
+            renderer: "default".into(), cpu_governor: "default".into(),
+            gpu_max_pwrlevel: -1, thermal_preset: "default".into(),
+            swappiness: 0, io_scheduler: "default".into(),
+            io_device: None, tcp_congestion: "default".into(),
+        };
+        let json = serde_json::to_string(&cfg).unwrap();
+        let d: BootConfig = serde_json::from_str(&json).unwrap();
+        assert!(d.io_device.is_none());
+    }
+
+    #[test]
+    fn test_boot_config_empty_values() {
+        let cfg = BootConfig {
+            renderer: "".into(), cpu_governor: "".into(),
+            gpu_max_pwrlevel: 0, thermal_preset: "".into(),
+            swappiness: 0, io_scheduler: "".into(),
+            io_device: Some("".into()), tcp_congestion: "".into(),
+        };
+        let json = serde_json::to_string(&cfg).unwrap();
+        let d: BootConfig = serde_json::from_str(&json).unwrap();
+        assert!(d.renderer.is_empty());
+        assert_eq!(d.gpu_max_pwrlevel, 0);
+    }
+
+    #[test]
+    fn test_app_profile_json_empty_package() {
+        let profiles = vec![AppProfileJson {
+            package: "".into(), renderer: "".into(), density: 0,
+            font_scale: 0.0, device_profile: "".into(), cpu_governor: "".into(),
+            gpu_max_pwrlevel: 0, thermal_preset: "".into(),
+        }];
+        let json = serde_json::to_string(&profiles).unwrap();
+        let d: Vec<AppProfileJson> = serde_json::from_str(&json).unwrap();
+        assert!(d[0].package.is_empty());
+    }
+
+    #[test]
+    fn test_debounce_write_nonexistent() {
+        assert!(!debounce_write("/nonexistent_debounce_test", "1", 2));
+    }
+
+    #[test]
+    fn test_save_profiles_to_file_temp() {
+        let tmp = std::env::temp_dir().join("farewell_test_profiles.json");
+        assert!(save_profiles_to_file(tmp.to_str().unwrap(), "[]"));
+        let _ = std::fs::remove_file(&tmp);
+    }
+
+    #[test]
+    fn test_load_profiles_from_file_temp() {
+        let tmp = std::env::temp_dir().join("farewell_test_load.json");
+        std::fs::write(&tmp, "[]").ok();
+        assert_eq!(load_profiles_from_file(tmp.to_str().unwrap()), "[]");
+        let _ = std::fs::remove_file(&tmp);
+    }
+
+    #[test]
+    fn test_load_profiles_from_file_missing() {
+        assert_eq!(load_profiles_from_file("/tmp/farewell_nonexistent.json"), "[]");
+    }
+
+    #[test]
+    fn test_drop_caches_and_kill() {
+        assert!(drop_caches_and_kill());
+    }
+
+    #[test]
+    fn test_set_screen_brightness_zero() {
+        // will fail on non-Android, but should not panic
+        let _ = set_screen_brightness(0);
+    }
+
+    #[test]
+    fn test_set_dnd_enabled() {
+        let _ = set_dnd_enabled(true);
+        let _ = set_dnd_enabled(false);
+    }
+
+    #[test]
+    fn test_set_immersive_mode_empty() {
+        let _ = set_immersive_mode("", true);
+        let _ = set_immersive_mode("", false);
     }
 }

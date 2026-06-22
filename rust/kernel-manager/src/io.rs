@@ -1,4 +1,4 @@
-use crate::sysfs;
+use crate::sysfs::{self, SysfsError, SysfsResult};
 
 /// Get current I/O scheduler for a block device.
 ///
@@ -24,11 +24,12 @@ pub fn get_io_scheduler(device: &str) -> String {
 /// **Sysfs path:** `/sys/block/*/queue/scheduler`
 /// **Root:** Required
 /// **Returns:** `true` if written successfully
-pub fn set_io_scheduler(device: &str, scheduler: &str) -> bool {
+pub fn set_io_scheduler(device: &str, scheduler: &str) -> SysfsResult<bool> {
     let path = format!("/sys/block/{}/queue/scheduler", device);
     sysfs::chmod(&path, "644");
     let ok = sysfs::write_sysfs(&path, scheduler);
-    sysfs::chmod(&path, "444"); ok
+    sysfs::chmod(&path, "444");
+    if ok { Ok(true) } else { Err(SysfsError::IoError(path)) }
 }
 
 /// Get available I/O schedulers for a block device.
@@ -58,11 +59,12 @@ pub fn get_io_readahead_kb(device: &str) -> i32 {
 /// **Sysfs path:** `/sys/block/*/queue/read_ahead_kb`
 /// **Root:** Required
 /// **Returns:** `true` if written successfully
-pub fn set_io_readahead_kb(device: &str, kb: i32) -> bool {
+pub fn set_io_readahead_kb(device: &str, kb: i32) -> SysfsResult<bool> {
     let path = format!("/sys/block/{}/queue/read_ahead_kb", device);
     sysfs::chmod(&path, "644");
     let ok = sysfs::write_sysfs(&path, &kb.to_string());
-    sysfs::chmod(&path, "444"); ok
+    sysfs::chmod(&path, "444");
+    if ok { Ok(true) } else { Err(SysfsError::IoError(path)) }
 }
 
 /// Get max number of I/O requests for a block device.
@@ -80,11 +82,12 @@ pub fn get_io_nr_requests(device: &str) -> i32 {
 /// **Sysfs path:** `/sys/block/*/queue/nr_requests`
 /// **Root:** Required
 /// **Returns:** `true` if written successfully
-pub fn set_io_nr_requests(device: &str, nr: i32) -> bool {
+pub fn set_io_nr_requests(device: &str, nr: i32) -> SysfsResult<bool> {
     let path = format!("/sys/block/{}/queue/nr_requests", device);
     sysfs::chmod(&path, "644");
     let ok = sysfs::write_sysfs(&path, &nr.to_string());
-    sysfs::chmod(&path, "444"); ok
+    sysfs::chmod(&path, "444");
+    if ok { Ok(true) } else { Err(SysfsError::IoError(path)) }
 }
 
 /// Check if I/O stats are enabled for a block device.
@@ -102,11 +105,12 @@ pub fn get_io_stats_enabled(device: &str) -> bool {
 /// **Sysfs path:** `/sys/block/*/queue/iostats`
 /// **Root:** Required
 /// **Returns:** `true` if written successfully
-pub fn set_io_stats_enabled(device: &str, enabled: bool) -> bool {
+pub fn set_io_stats_enabled(device: &str, enabled: bool) -> SysfsResult<bool> {
     let path = format!("/sys/block/{}/queue/iostats", device);
     sysfs::chmod(&path, "644");
     let ok = sysfs::write_sysfs(&path, if enabled { "1" } else { "0" });
-    sysfs::chmod(&path, "444"); ok
+    sysfs::chmod(&path, "444");
+    if ok { Ok(true) } else { Err(SysfsError::IoError(path)) }
 }
 
 #[cfg(test)]

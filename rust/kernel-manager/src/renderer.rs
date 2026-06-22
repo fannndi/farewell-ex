@@ -1,4 +1,5 @@
 use std::process::Command;
+use crate::sysfs::{SysfsError, SysfsResult};
 
 // ==================== GPU Renderer Switch (SkiaShift resetprop approach) ====================
 // Per-app requires LSPosed hooks — marked TODO
@@ -25,16 +26,18 @@ pub const OPENGL_PROPS: &[(&str, &str)] = &[
 ///
 /// **Root:** Required
 /// **Returns:** `true` if resetprop succeeded
-pub fn resetprop(key: &str, value: &str) -> bool {
-    Command::new("resetprop").args(["-n", key, value]).status().is_ok()
+pub fn resetprop(key: &str, value: &str) -> SysfsResult<bool> {
+    if Command::new("resetprop").args(["-n", key, value]).status().is_ok() { Ok(true) }
+    else { Err(SysfsError::IoError(format!("resetprop -n {} {}", key, value))) }
 }
 
 /// Delete a system property override via `resetprop --delete`.
 ///
 /// **Root:** Required
 /// **Returns:** `true` if resetprop succeeded
-pub fn resetprop_delete(key: &str) -> bool {
-    Command::new("resetprop").args(["--delete", key]).status().is_ok()
+pub fn resetprop_delete(key: &str) -> SysfsResult<bool> {
+    if Command::new("resetprop").args(["--delete", key]).status().is_ok() { Ok(true) }
+    else { Err(SysfsError::IoError(format!("resetprop --delete {}", key))) }
 }
 
 /// Switch GPU renderer between Vulkan and OpenGL (SkiaShift).
@@ -46,21 +49,19 @@ pub fn resetprop_delete(key: &str) -> bool {
 /// ```
 /// renderer::set_renderer("vulkan");
 /// ```
-pub fn set_renderer(mode: &str) -> bool {
+pub fn set_renderer(mode: &str) -> SysfsResult<bool> {
     let props = match mode {
         "vulkan" => VULKAN_PROPS,
         "opengl" | "gl" => OPENGL_PROPS,
-        _ => return false,
+        _ => return Err(SysfsError::IoError(format!("unknown renderer mode: {}", mode))),
     };
-    let mut all_ok = true;
     for (key, value) in props {
-        if !resetprop(key, value) { all_ok = false; }
+        if !resetprop(key, value)? { return Err(SysfsError::IoError(format!("resetprop {} failed", key))); }
     }
-    // Clean up Vulkan-only prop for OpenGL
     if mode == "opengl" || mode == "gl" {
-        resetprop_delete("renderthread.skia.reduceopstasksplitting");
+        resetprop_delete("renderthread.skia.reduceopstasksplitting")?;
     }
-    all_ok
+    Ok(true)
 }
 
 /// Get current GPU renderer from `debug.hwui.renderer`.

@@ -1,4 +1,4 @@
-use crate::sysfs;
+use crate::sysfs::{self, SysfsError, SysfsResult};
 
 // ==================== Sched Features (Encore) ====================
 
@@ -16,7 +16,7 @@ pub fn get_sched_features() -> String {
 /// **Sysfs path:** `/sys/kernel/debug/sched_features`
 /// **Root:** Required
 /// **Returns:** `true` if written successfully
-pub fn set_sched_feature(feature: &str, enabled: bool) -> bool {
+pub fn set_sched_feature(feature: &str, enabled: bool) -> SysfsResult<bool> {
     let path = "/sys/kernel/debug/sched_features";
     let current = get_sched_features();
     let new_val = if enabled {
@@ -26,7 +26,8 @@ pub fn set_sched_feature(feature: &str, enabled: bool) -> bool {
     };
     sysfs::chmod(path, "644");
     let ok = sysfs::write_sysfs(path, &new_val);
-    sysfs::chmod(path, "444"); ok
+    sysfs::chmod(path, "444");
+    if ok { Ok(true) } else { Err(SysfsError::IoError(path.to_string())) }
 }
 
 // ==================== Stune Boost (Encore) ====================
@@ -36,11 +37,12 @@ pub fn set_sched_feature(feature: &str, enabled: bool) -> bool {
 /// **Sysfs path:** `/dev/stune/top-app/schedtune.prefer_idle`
 /// **Root:** Required
 /// **Returns:** `true` if written successfully
-pub fn set_stune_prefer_idle(prefer: bool) -> bool {
+pub fn set_stune_prefer_idle(prefer: bool) -> SysfsResult<bool> {
     let path = "/dev/stune/top-app/schedtune.prefer_idle";
     sysfs::chmod(path, "644");
     let ok = sysfs::write_sysfs(path, if prefer { "1" } else { "0" });
-    sysfs::chmod(path, "444"); ok
+    sysfs::chmod(path, "444");
+    if ok { Ok(true) } else { Err(SysfsError::IoError(path.to_string())) }
 }
 
 /// Set top-app stune boost value (Encore).
@@ -48,11 +50,12 @@ pub fn set_stune_prefer_idle(prefer: bool) -> bool {
 /// **Sysfs path:** `/dev/stune/top-app/schedtune.boost`
 /// **Root:** Required
 /// **Returns:** `true` if written successfully
-pub fn set_stune_boost(boost: i32) -> bool {
+pub fn set_stune_boost(boost: i32) -> SysfsResult<bool> {
     let path = "/dev/stune/top-app/schedtune.boost";
     sysfs::chmod(path, "644");
     let ok = sysfs::write_sysfs(path, &boost.to_string());
-    sysfs::chmod(path, "444"); ok
+    sysfs::chmod(path, "444");
+    if ok { Ok(true) } else { Err(SysfsError::IoError(path.to_string())) }
 }
 
 // ==================== Split Lock (Encore) ====================
@@ -62,11 +65,12 @@ pub fn set_stune_boost(boost: i32) -> bool {
 /// **Sysfs path:** `/proc/sys/kernel/split_lock_mitigate`
 /// **Root:** Required
 /// **Returns:** `true` if written successfully
-pub fn set_split_lock_mitigate(enabled: bool) -> bool {
+pub fn set_split_lock_mitigate(enabled: bool) -> SysfsResult<bool> {
     let path = "/proc/sys/kernel/split_lock_mitigate";
     sysfs::chmod(path, "644");
     let ok = sysfs::write_sysfs(path, if enabled { "1" } else { "0" });
-    sysfs::chmod(path, "444"); ok
+    sysfs::chmod(path, "444");
+    if ok { Ok(true) } else { Err(SysfsError::IoError(path.to_string())) }
 }
 
 // ==================== Sched Lib (Encore) ====================
@@ -76,11 +80,12 @@ pub fn set_split_lock_mitigate(enabled: bool) -> bool {
 /// **Sysfs path:** `/proc/sys/kernel/sched_lib_name`
 /// **Root:** Required
 /// **Returns:** `true` if written successfully
-pub fn set_sched_lib_name(names: &str) -> bool {
+pub fn set_sched_lib_name(names: &str) -> SysfsResult<bool> {
     let path = "/proc/sys/kernel/sched_lib_name";
     sysfs::chmod(path, "644");
     let ok = sysfs::write_sysfs(path, names);
-    sysfs::chmod(path, "444"); ok
+    sysfs::chmod(path, "444");
+    if ok { Ok(true) } else { Err(SysfsError::IoError(path.to_string())) }
 }
 
 /// Set scheduler library mask force value (Encore).
@@ -88,11 +93,12 @@ pub fn set_sched_lib_name(names: &str) -> bool {
 /// **Sysfs path:** `/proc/sys/kernel/sched_lib_mask_force`
 /// **Root:** Required
 /// **Returns:** `true` if written successfully
-pub fn set_sched_lib_mask_force(mask: i32) -> bool {
+pub fn set_sched_lib_mask_force(mask: i32) -> SysfsResult<bool> {
     let path = "/proc/sys/kernel/sched_lib_mask_force";
     sysfs::chmod(path, "644");
     let ok = sysfs::write_sysfs(path, &mask.to_string());
-    sysfs::chmod(path, "444"); ok
+    sysfs::chmod(path, "444");
+    if ok { Ok(true) } else { Err(SysfsError::IoError(path.to_string())) }
 }
 
 // ==================== BORE Scheduler (RvKernel) ====================
@@ -102,11 +108,12 @@ pub fn set_sched_lib_mask_force(mask: i32) -> bool {
 /// **Sysfs path:** `/proc/sys/kernel/sched_bore`
 /// **Root:** Required
 /// **Returns:** `true` if written successfully
-pub fn set_sched_bore(enabled: bool) -> bool {
+pub fn set_sched_bore(enabled: bool) -> SysfsResult<bool> {
     let path = "/proc/sys/kernel/sched_bore";
     sysfs::chmod(path, "644");
     let ok = sysfs::write_sysfs(path, if enabled { "1" } else { "0" });
-    sysfs::chmod(path, "444"); ok
+    sysfs::chmod(path, "444");
+    if ok { Ok(true) } else { Err(SysfsError::IoError(path.to_string())) }
 }
 
 /// Set scheduler burst update period in ms (RvKernel).
@@ -114,11 +121,12 @@ pub fn set_sched_bore(enabled: bool) -> bool {
 /// **Sysfs path:** `/proc/sys/kernel/sched_burst_update_period`
 /// **Root:** Required
 /// **Returns:** `true` if written successfully
-pub fn set_sched_burst_update_period(ms: i32) -> bool {
+pub fn set_sched_burst_update_period(ms: i32) -> SysfsResult<bool> {
     let path = "/proc/sys/kernel/sched_burst_update_period";
     sysfs::chmod(path, "644");
     let ok = sysfs::write_sysfs(path, &ms.to_string());
-    sysfs::chmod(path, "444"); ok
+    sysfs::chmod(path, "444");
+    if ok { Ok(true) } else { Err(SysfsError::IoError(path.to_string())) }
 }
 
 /// Toggle scheduler burst smooth-up (RvKernel).
@@ -126,11 +134,12 @@ pub fn set_sched_burst_update_period(ms: i32) -> bool {
 /// **Sysfs path:** `/proc/sys/kernel/sched_burst_smooth_up`
 /// **Root:** Required
 /// **Returns:** `true` if written successfully
-pub fn set_sched_burst_smooth_up(enabled: bool) -> bool {
+pub fn set_sched_burst_smooth_up(enabled: bool) -> SysfsResult<bool> {
     let path = "/proc/sys/kernel/sched_burst_smooth_up";
     sysfs::chmod(path, "644");
     let ok = sysfs::write_sysfs(path, if enabled { "1" } else { "0" });
-    sysfs::chmod(path, "444"); ok
+    sysfs::chmod(path, "444");
+    if ok { Ok(true) } else { Err(SysfsError::IoError(path.to_string())) }
 }
 
 /// Toggle scheduler burst graham (RvKernel).
@@ -138,11 +147,12 @@ pub fn set_sched_burst_smooth_up(enabled: bool) -> bool {
 /// **Sysfs path:** `/proc/sys/kernel/sched_burst_graham`
 /// **Root:** Required
 /// **Returns:** `true` if written successfully
-pub fn set_sched_burst_graham(enabled: bool) -> bool {
+pub fn set_sched_burst_graham(enabled: bool) -> SysfsResult<bool> {
     let path = "/proc/sys/kernel/sched_burst_graham";
     sysfs::chmod(path, "644");
     let ok = sysfs::write_sysfs(path, if enabled { "1" } else { "0" });
-    sysfs::chmod(path, "444"); ok
+    sysfs::chmod(path, "444");
+    if ok { Ok(true) } else { Err(SysfsError::IoError(path.to_string())) }
 }
 
 // ==================== Uclamp (RvKernel) ====================
@@ -152,11 +162,12 @@ pub fn set_sched_burst_graham(enabled: bool) -> bool {
 /// **Sysfs path:** `/proc/sys/kernel/sched_util_clamp_min`
 /// **Root:** Required
 /// **Returns:** `true` if written successfully
-pub fn set_sched_util_clamp_min(val: i32) -> bool {
+pub fn set_sched_util_clamp_min(val: i32) -> SysfsResult<bool> {
     let path = "/proc/sys/kernel/sched_util_clamp_min";
     sysfs::chmod(path, "644");
     let ok = sysfs::write_sysfs(path, &val.to_string());
-    sysfs::chmod(path, "444"); ok
+    sysfs::chmod(path, "444");
+    if ok { Ok(true) } else { Err(SysfsError::IoError(path.to_string())) }
 }
 
 /// Set scheduler utilization clamp maximum (RvKernel).
@@ -164,11 +175,12 @@ pub fn set_sched_util_clamp_min(val: i32) -> bool {
 /// **Sysfs path:** `/proc/sys/kernel/sched_util_clamp_max`
 /// **Root:** Required
 /// **Returns:** `true` if written successfully
-pub fn set_sched_util_clamp_max(val: i32) -> bool {
+pub fn set_sched_util_clamp_max(val: i32) -> SysfsResult<bool> {
     let path = "/proc/sys/kernel/sched_util_clamp_max";
     sysfs::chmod(path, "644");
     let ok = sysfs::write_sysfs(path, &val.to_string());
-    sysfs::chmod(path, "444"); ok
+    sysfs::chmod(path, "444");
+    if ok { Ok(true) } else { Err(SysfsError::IoError(path.to_string())) }
 }
 
 /// Set RT default utilization clamp minimum (RvKernel).
@@ -176,11 +188,12 @@ pub fn set_sched_util_clamp_max(val: i32) -> bool {
 /// **Sysfs path:** `/proc/sys/kernel/sched_util_clamp_min_rt_default`
 /// **Root:** Required
 /// **Returns:** `true` if written successfully
-pub fn set_sched_util_clamp_min_rt_default(val: i32) -> bool {
+pub fn set_sched_util_clamp_min_rt_default(val: i32) -> SysfsResult<bool> {
     let path = "/proc/sys/kernel/sched_util_clamp_min_rt_default";
     sysfs::chmod(path, "644");
     let ok = sysfs::write_sysfs(path, &val.to_string());
-    sysfs::chmod(path, "444"); ok
+    sysfs::chmod(path, "444");
+    if ok { Ok(true) } else { Err(SysfsError::IoError(path.to_string())) }
 }
 
 // ==================== Sched Autogroup (RvKernel) ====================
@@ -190,11 +203,12 @@ pub fn set_sched_util_clamp_min_rt_default(val: i32) -> bool {
 /// **Sysfs path:** `/proc/sys/kernel/sched_autogroup_enabled`
 /// **Root:** Required
 /// **Returns:** `true` if written successfully
-pub fn set_sched_autogroup_enabled(enabled: bool) -> bool {
+pub fn set_sched_autogroup_enabled(enabled: bool) -> SysfsResult<bool> {
     let path = "/proc/sys/kernel/sched_autogroup_enabled";
     sysfs::chmod(path, "644");
     let ok = sysfs::write_sysfs(path, if enabled { "1" } else { "0" });
-    sysfs::chmod(path, "444"); ok
+    sysfs::chmod(path, "444");
+    if ok { Ok(true) } else { Err(SysfsError::IoError(path.to_string())) }
 }
 
 // ==================== VM Params (Encore) ====================
@@ -204,11 +218,12 @@ pub fn set_sched_autogroup_enabled(enabled: bool) -> bool {
 /// **Sysfs path:** `/proc/sys/vm/vfs_cache_pressure`
 /// **Root:** Required
 /// **Returns:** `true` if written successfully
-pub fn set_vfs_cache_pressure(pct: i32) -> bool {
+pub fn set_vfs_cache_pressure(pct: i32) -> SysfsResult<bool> {
     let path = "/proc/sys/vm/vfs_cache_pressure";
     sysfs::chmod(path, "644");
     let ok = sysfs::write_sysfs(path, &pct.to_string());
-    sysfs::chmod(path, "444"); ok
+    sysfs::chmod(path, "444");
+    if ok { Ok(true) } else { Err(SysfsError::IoError(path.to_string())) }
 }
 
 /// Set memory overcommit ratio percentage (Encore).
@@ -216,11 +231,12 @@ pub fn set_vfs_cache_pressure(pct: i32) -> bool {
 /// **Sysfs path:** `/proc/sys/vm/overcommit_ratio`
 /// **Root:** Required
 /// **Returns:** `true` if written successfully
-pub fn set_overcommit_ratio(pct: i32) -> bool {
+pub fn set_overcommit_ratio(pct: i32) -> SysfsResult<bool> {
     let path = "/proc/sys/vm/overcommit_ratio";
     sysfs::chmod(path, "644");
     let ok = sysfs::write_sysfs(path, &pct.to_string());
-    sysfs::chmod(path, "444"); ok
+    sysfs::chmod(path, "444");
+    if ok { Ok(true) } else { Err(SysfsError::IoError(path.to_string())) }
 }
 
 // ==================== Cpuset (ZKM) ====================
@@ -239,8 +255,9 @@ pub fn get_cpuset_cpus(group: &str) -> String {
 /// **Sysfs path:** `/dev/cpuset/*/cpus`
 /// **Root:** Required
 /// **Returns:** `true` if written successfully
-pub fn set_cpuset_cpus(group: &str, cpus: &str) -> bool {
-    sysfs::write_sysfs(&format!("/dev/cpuset/{}/cpus", group), cpus)
+pub fn set_cpuset_cpus(group: &str, cpus: &str) -> SysfsResult<bool> {
+    let path = format!("/dev/cpuset/{}/cpus", group);
+    if sysfs::write_sysfs(&path, cpus) { Ok(true) } else { Err(SysfsError::IoError(path)) }
 }
 
 /// Get memory node affinity for a cpuset group (ZKM).
@@ -257,8 +274,9 @@ pub fn get_cpuset_mems(group: &str) -> String {
 /// **Sysfs path:** `/dev/cpuset/*/mems`
 /// **Root:** Required
 /// **Returns:** `true` if written successfully
-pub fn set_cpuset_mems(group: &str, mems: &str) -> bool {
-    sysfs::write_sysfs(&format!("/dev/cpuset/{}/mems", group), mems)
+pub fn set_cpuset_mems(group: &str, mems: &str) -> SysfsResult<bool> {
+    let path = format!("/dev/cpuset/{}/mems", group);
+    if sysfs::write_sysfs(&path, mems) { Ok(true) } else { Err(SysfsError::IoError(path)) }
 }
 
 /// List available cpuset groups on the system (ZKM).
@@ -288,9 +306,17 @@ pub fn get_available_cpuset_groups() -> Vec<String> {
 /// **Sysfs path:** `/proc/sys/vm/drop_caches`
 /// **Root:** Required
 /// **Returns:** `true` if written successfully
-pub fn drop_caches() -> bool {
+pub fn drop_caches() -> SysfsResult<bool> {
     sysfs::chmod("/proc/sys/vm/drop_caches", "644");
-    sysfs::write_sysfs("/proc/sys/vm/drop_caches", "3")
+    if sysfs::write_sysfs("/proc/sys/vm/drop_caches", "3") { Ok(true) } else { Err(SysfsError::IoError("/proc/sys/vm/drop_caches".to_string())) }
+}
+
+pub fn get_sched_autogroup_enabled() -> bool {
+    sysfs::read_sysfs_int("/proc/sys/kernel/sched_autogroup_enabled", 1000).unwrap_or(0) == 1
+}
+
+pub fn get_overcommit_ratio() -> i32 {
+    sysfs::read_sysfs_int("/proc/sys/vm/overcommit_ratio", 1000).unwrap_or(50) as i32
 }
 
 #[cfg(test)]
@@ -341,5 +367,77 @@ mod tests {
     fn test_uclamp_paths() {
         assert_eq!("/proc/sys/kernel/sched_util_clamp_min", "/proc/sys/kernel/sched_util_clamp_min");
         assert_eq!("/proc/sys/kernel/sched_util_clamp_max", "/proc/sys/kernel/sched_util_clamp_max");
+    }
+
+    #[test]
+    fn test_autogroup_path() {
+        let p = "/proc/sys/kernel/sched_autogroup_enabled";
+        assert_eq!(p, "/proc/sys/kernel/sched_autogroup_enabled");
+    }
+
+    #[test]
+    fn test_overcommit_ratio_format() {
+        let v = 150i32;
+        let s = v.to_string();
+        assert_eq!(s, "150");
+        let v = 0i32;
+        assert_eq!(v.to_string(), "0");
+    }
+
+    #[test]
+    fn test_vfs_cache_pressure_edge_values() {
+        // Edge: 0% (never reclaim) and 1000% (aggressive reclaim)
+        let s = 0i32.to_string();
+        assert_eq!(s, "0");
+        let s = 1000i32.to_string();
+        assert_eq!(s, "1000");
+    }
+
+    #[test]
+    fn test_sched_feature_enable_disable() {
+        // Simulate adding and removing feature from string
+        let current = "NO_PLACE_LAG CRYPTO_CLEAR_BIG_STRUCTS";
+        let feature = "CLOCK_NEW_NICE";
+        let added = format!("{} {}", current, feature);
+        assert!(added.contains(feature));
+        let removed = added.replace(feature, "").replace("  ", " ");
+        assert!(!removed.contains(feature));
+    }
+
+    #[test]
+    fn test_cpuset_format_paths() {
+        for group in &["top-app", "foreground", "background", "system-background", "restricted"] {
+            let p = format!("/dev/cpuset/{}/cpus", group);
+            assert!(p.contains(group));
+            let p = format!("/dev/cpuset/{}/mems", group);
+            assert!(p.contains(group));
+        }
+    }
+
+    #[test]
+    fn test_get_cpuset_cpus_nonexistent() {
+        let cpus = get_cpuset_cpus("nonexistent_group_xyz");
+        assert!(cpus.is_empty());
+    }
+
+    #[test]
+    fn test_get_cpuset_mems_nonexistent() {
+        let mems = get_cpuset_mems("nonexistent_group_xyz");
+        assert!(mems.is_empty());
+    }
+
+    #[test]
+    fn test_set_cpuset_cpus_nonexistent() {
+        assert!(!set_cpuset_cpus("nonexistent_xyz", "0-3"));
+    }
+
+    #[test]
+    fn test_set_cpuset_mems_nonexistent() {
+        assert!(!set_cpuset_mems("nonexistent_xyz", "0"));
+    }
+
+    #[test]
+    fn test_drop_caches_nonexistent() {
+        assert!(!drop_caches());
     }
 }

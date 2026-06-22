@@ -1,4 +1,4 @@
-use crate::sysfs;
+use crate::sysfs::{self, SysfsError, SysfsResult};
 use serde::{Deserialize, Serialize};
 
 /// A single thermal zone with name and temperature.
@@ -74,7 +74,7 @@ pub fn read_thermal_zones_json() -> String {
 /// ```
 /// thermal::set_thermal_sconfig("extreme");
 /// ```
-pub fn set_thermal_sconfig(preset: &str) -> bool {
+pub fn set_thermal_sconfig(preset: &str) -> SysfsResult<bool> {
     let path = "/sys/class/thermal/thermal_message/sconfig";
     let value = match preset {
         "default" | "class0" => "11",
@@ -87,7 +87,7 @@ pub fn set_thermal_sconfig(preset: &str) -> bool {
     sysfs::chmod(path, "644");
     let ok = sysfs::write_sysfs(path, value);
     sysfs::chmod(path, "444");
-    ok
+    if ok { Ok(true) } else { Err(SysfsError::IoError(path.to_string())) }
 }
 
 // ==================== MSM Thermal (SmartPack) ====================
@@ -97,7 +97,7 @@ pub fn set_thermal_sconfig(preset: &str) -> bool {
 /// **Sysfs path:** `/sys/module/msm_thermal/parameters/enabled`
 /// **Root:** Required
 /// **Returns:** `true` if any MSM thermal path was written
-pub fn set_msm_thermal_enabled(enabled: bool) -> bool {
+pub fn set_msm_thermal_enabled(enabled: bool) -> SysfsResult<bool> {
     let val = if enabled { "Y" } else { "N" };
     let paths = [
         "/sys/module/msm_thermal/parameters/enabled",
@@ -112,7 +112,7 @@ pub fn set_msm_thermal_enabled(enabled: bool) -> bool {
             sysfs::chmod(path, "444");
         }
     }
-    ok
+    if ok { Ok(true) } else { Err(SysfsError::NotFound("no msm_thermal path found".to_string())) }
 }
 
 // ==================== EARA Thermal (Encore + ZKM + AZenith) ====================
@@ -122,12 +122,12 @@ pub fn set_msm_thermal_enabled(enabled: bool) -> bool {
 /// **Sysfs path:** `/sys/kernel/eara_thermal/enable`
 /// **Root:** Required
 /// **Returns:** `true` if written successfully
-pub fn set_eara_thermal_enabled(enabled: bool) -> bool {
+pub fn set_eara_thermal_enabled(enabled: bool) -> SysfsResult<bool> {
     let path = "/sys/kernel/eara_thermal/enable";
-    if !sysfs::file_exists(path) { return false; }
+    if !sysfs::file_exists(path) { return Err(SysfsError::NotFound(path.to_string())); }
     sysfs::chmod(path, "644");
-    let ok = sysfs::write_sysfs(path, if enabled { "1" } else { "0" });
-    sysfs::chmod(path, "444"); ok
+    if sysfs::write_sysfs(path, if enabled { "1" } else { "0" }) { sysfs::chmod(path, "444"); Ok(true) }
+    else { Err(SysfsError::IoError(path.to_string())) }
 }
 
 /// Toggle EARA fake throttle (Encore/ZKM/AZenith).
@@ -135,12 +135,12 @@ pub fn set_eara_thermal_enabled(enabled: bool) -> bool {
 /// **Sysfs path:** `/sys/kernel/eara_thermal/fake_throttle`
 /// **Root:** Required
 /// **Returns:** `true` if written successfully
-pub fn set_eara_fake_throttle(enabled: bool) -> bool {
+pub fn set_eara_fake_throttle(enabled: bool) -> SysfsResult<bool> {
     let path = "/sys/kernel/eara_thermal/fake_throttle";
-    if !sysfs::file_exists(path) { return false; }
+    if !sysfs::file_exists(path) { return Err(SysfsError::NotFound(path.to_string())); }
     sysfs::chmod(path, "644");
-    let ok = sysfs::write_sysfs(path, if enabled { "1" } else { "0" });
-    sysfs::chmod(path, "444"); ok
+    if sysfs::write_sysfs(path, if enabled { "1" } else { "0" }) { sysfs::chmod(path, "444"); Ok(true) }
+    else { Err(SysfsError::IoError(path.to_string())) }
 }
 
 // ==================== FPSGO (Encore + ZKM) ====================
@@ -150,12 +150,12 @@ pub fn set_eara_fake_throttle(enabled: bool) -> bool {
 /// **Sysfs path:** `/sys/kernel/fpsgo/common/fpsgo_enable`
 /// **Root:** Required
 /// **Returns:** `true` if written successfully
-pub fn set_fpsgo_enabled(enabled: bool) -> bool {
+pub fn set_fpsgo_enabled(enabled: bool) -> SysfsResult<bool> {
     let path = "/sys/kernel/fpsgo/common/fpsgo_enable";
-    if !sysfs::file_exists(path) { return false; }
+    if !sysfs::file_exists(path) { return Err(SysfsError::NotFound(path.to_string())); }
     sysfs::chmod(path, "644");
-    let ok = sysfs::write_sysfs(path, if enabled { "1" } else { "0" });
-    sysfs::chmod(path, "444"); ok
+    if sysfs::write_sysfs(path, if enabled { "1" } else { "0" }) { sysfs::chmod(path, "444"); Ok(true) }
+    else { Err(SysfsError::IoError(path.to_string())) }
 }
 
 /// Force FPSGO on/off (Encore/ZKM).
@@ -163,12 +163,12 @@ pub fn set_fpsgo_enabled(enabled: bool) -> bool {
 /// **Sysfs path:** `/sys/kernel/fpsgo/common/force_onoff`
 /// **Root:** Required
 /// **Returns:** `true` if written successfully
-pub fn set_fpsgo_force(enabled: bool) -> bool {
+pub fn set_fpsgo_force(enabled: bool) -> SysfsResult<bool> {
     let path = "/sys/kernel/fpsgo/common/force_onoff";
-    if !sysfs::file_exists(path) { return false; }
+    if !sysfs::file_exists(path) { return Err(SysfsError::NotFound(path.to_string())); }
     sysfs::chmod(path, "644");
-    let ok = sysfs::write_sysfs(path, if enabled { "1" } else { "0" });
-    sysfs::chmod(path, "444"); ok
+    if sysfs::write_sysfs(path, if enabled { "1" } else { "0" }) { sysfs::chmod(path, "444"); Ok(true) }
+    else { Err(SysfsError::IoError(path.to_string())) }
 }
 
 #[cfg(test)]
@@ -226,5 +226,87 @@ mod tests {
         let temp: f32 = -10.0;
         let valid = temp > 0.0 && temp < 150.0;
         assert!(!valid);
+    }
+
+    #[test]
+    fn test_thermal_zone_zero_temp() {
+        let t = ThermalZone { name: "0:cpu-thermal".into(), temp: 0.0 };
+        let json = serde_json::to_string(&t).unwrap();
+        let d: ThermalZone = serde_json::from_str(&json).unwrap();
+        assert!((d.temp - 0.0).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn test_thermal_zone_high_boundary() {
+        let t = ThermalZone { name: "0:tsens".into(), temp: 149.9 };
+        let json = serde_json::to_string(&t).unwrap();
+        let d: ThermalZone = serde_json::from_str(&json).unwrap();
+        assert!(d.temp < 150.0);
+    }
+
+    #[test]
+    fn test_thermal_zone_above_max_rejected() {
+        let temp: f32 = 150.0;
+        let valid = temp > 0.0 && temp < 150.0;
+        assert!(!valid);
+    }
+
+    #[test]
+    fn test_thermal_zone_negative_rejected() {
+        let temp: f32 = -0.1;
+        let valid = temp > 0.0 && temp < 150.0;
+        assert!(!valid);
+    }
+
+    #[test]
+    fn test_read_thermal_zone_nonexistent() {
+        let t = read_thermal_zone(999);
+        assert_eq!(t, 0.0);
+    }
+
+    #[test]
+    fn test_read_cpu_temperature_fallback() {
+        let t = read_cpu_temperature();
+        assert!(t >= 0.0);
+    }
+
+    #[test]
+    fn test_thermal_zone_name_special_chars() {
+        let t = ThermalZone { name: "zone_0:tsens_tz_sensor-X2_3".into(), temp: 25.0 };
+        let json = serde_json::to_string(&t).unwrap();
+        let d: ThermalZone = serde_json::from_str(&json).unwrap();
+        assert_eq!(d.name, "zone_0:tsens_tz_sensor-X2_3");
+    }
+
+    #[test]
+    fn test_thermal_zone_empty_name() {
+        let t = ThermalZone { name: "".into(), temp: 0.0 };
+        let json = serde_json::to_string(&t).unwrap();
+        let d: ThermalZone = serde_json::from_str(&json).unwrap();
+        assert!(d.name.is_empty());
+    }
+
+    #[test]
+    fn test_set_thermal_sconfig_all_presets() {
+        for preset in &["default", "class0", "extreme", "dynamic", "incalls", "cool", "unknown"] {
+            // Test mapping logic only (sysfs nonexistent → false)
+            let _ = set_thermal_sconfig(preset);
+        }
+    }
+
+    #[test]
+    fn test_set_msm_thermal_enabled_nonexistent() {
+        assert!(!set_msm_thermal_enabled(true));
+        assert!(!set_msm_thermal_enabled(false));
+    }
+
+    #[test]
+    fn test_set_eara_thermal_enabled_nonexistent() {
+        assert!(!set_eara_thermal_enabled(true));
+    }
+
+    #[test]
+    fn test_set_fpsgo_enabled_nonexistent() {
+        assert!(!set_fpsgo_enabled(true));
     }
 }

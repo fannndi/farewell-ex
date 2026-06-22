@@ -491,4 +491,110 @@ mod tests {
         let t2 = t;
         assert_eq!(t, t2);
     }
+
+    #[test]
+    fn test_tier_complete_ordering_chain() {
+        assert!(Tier::NonRoot < Tier::Adb);
+        assert!(Tier::Adb < Tier::Root);
+        assert!(Tier::Root < Tier::Zygisk);
+        assert!(Tier::Zygisk < Tier::Xposed);
+        assert!(Tier::NonRoot < Tier::Xposed);
+        assert!(Tier::Root < Tier::Xposed);
+        assert!(!(Tier::Xposed < Tier::NonRoot));
+    }
+
+    #[test]
+    fn test_framework_status_json_tier_key() {
+        let status = FrameworkStatus {
+            kernelsu: true, kernelsu_version: "1.0".into(),
+            magisk: false, magisk_version: "".into(),
+            zygisk_next: false, zygisk_next_version: "".into(),
+            vector: false, vector_version: "".into(),
+            zn_audit_patch: false, shizuku: false, resetprop: true,
+            current_tier: Tier::Root,
+        };
+        let json = status.to_json();
+        assert!(json.contains("kernelsu"));
+        assert!(json.contains("\"tier\":3"));
+        assert!(json.contains("Full ROOT"));
+    }
+
+    #[test]
+    fn test_framework_status_json_zygisk() {
+        let status = FrameworkStatus {
+            kernelsu: false, kernelsu_version: "".into(),
+            magisk: false, magisk_version: "".into(),
+            zygisk_next: true, zygisk_next_version: "2.0".into(),
+            vector: false, vector_version: "".into(),
+            zn_audit_patch: true, shizuku: false, resetprop: false,
+            current_tier: Tier::Zygisk,
+        };
+        let json = status.to_json();
+        assert!(json.contains("zygisk_next"));
+        assert!(json.contains("ReZygisk/ZygiskNext"));
+    }
+
+    #[test]
+    fn test_get_feature_matrix_tier_root_count() {
+        let features = get_feature_matrix(&Tier::Root);
+        let unlocked = features.iter().filter(|f| f.unlocked).count();
+        assert!(unlocked >= 10);
+    }
+
+    #[test]
+    fn test_get_feature_matrix_tier_adb_count() {
+        let features = get_feature_matrix(&Tier::Adb);
+        let unlocked = features.iter().filter(|f| f.unlocked).count();
+        assert!(unlocked >= 5);
+    }
+
+    #[test]
+    fn test_get_feature_matrix_tier_nonroot_count() {
+        let features = get_feature_matrix(&Tier::NonRoot);
+        let unlocked = features.iter().filter(|f| f.unlocked).count();
+        assert_eq!(unlocked, 6);
+    }
+
+    #[test]
+    fn test_has_farewell_companion_nonexistent() {
+        let v = has_farewell_companion();
+        #[cfg(not(target_os = "android"))]
+        assert!(!v);
+    }
+
+    #[test]
+    fn test_feature_matrix_feature_description_not_empty() {
+        let features = get_feature_matrix(&Tier::Xposed);
+        for f in &features {
+            assert!(!f.description.is_empty());
+        }
+    }
+
+    #[test]
+    fn test_feature_matrix_locked_at_nonroot() {
+        let features = get_feature_matrix(&Tier::NonRoot);
+        let locked: Vec<&str> = features.iter().filter(|f| !f.unlocked).map(|f| f.name.as_str()).collect();
+        assert!(locked.contains(&"set_cpu_governor"));
+        assert!(locked.contains(&"set_gpu_power_levels"));
+        assert!(locked.contains(&"set_thermal_sconfig"));
+    }
+
+    #[test]
+    fn test_get_unlocked_features_xposed_count() {
+        let unlocked = get_unlocked_features(&Tier::Xposed);
+        assert!(unlocked.len() >= 30);
+    }
+
+    #[test]
+    fn test_get_locked_features_xposed_count() {
+        let locked = get_locked_features(&Tier::Xposed);
+        assert!(locked.is_empty());
+    }
+
+    #[test]
+    fn test_get_locked_features_zygisk() {
+        let locked = get_locked_features(&Tier::Zygisk);
+        assert!(locked.contains(&"set_dpi_per_app"));
+        assert!(locked.contains(&"set_font_per_app"));
+    }
 }

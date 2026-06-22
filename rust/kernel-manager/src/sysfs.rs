@@ -313,4 +313,61 @@ mod tests {
         #[cfg(not(target_os = "android"))]
         assert!(get_system_property("test.prop").is_none());
     }
+
+    #[test]
+    fn test_sysfs_error_display_variants() {
+        assert_eq!(SysfsError::NotFound("/x".into()).to_string(), "NotFound: /x");
+        assert_eq!(SysfsError::PermissionDenied("/x".into()).to_string(), "PermissionDenied: /x");
+        assert_eq!(SysfsError::IoError("fail".into()).to_string(), "IoError: fail");
+        assert_eq!(SysfsError::ParseError("bad".into()).to_string(), "ParseError: bad");
+    }
+
+    #[test]
+    fn test_sysfs_error_is_error() {
+        let e = SysfsError::NotFound("x".into());
+        let _: &dyn std::error::Error = &e;
+    }
+
+    #[test]
+    fn test_sysfs_error_clone_and_partial_eq() {
+        let a = SysfsError::IoError("e".into());
+        let b = SysfsError::IoError("e".into());
+        let c = SysfsError::ParseError("e".into());
+        assert_eq!(a, b);
+        assert_ne!(a, c);
+        let _d = a.clone();
+    }
+
+    #[test]
+    fn test_read_sysfs_cached_zero_ttl() {
+        invalidate_cache();
+        let r = read_sysfs_cached("/nonexistent_zero_ttl", 0);
+        assert!(r.is_none());
+    }
+
+    #[test]
+    fn test_write_sysfs_null_byte_path() {
+        assert!(!write_sysfs("/bad\x00path", "1"));
+    }
+
+    #[test]
+    fn test_write_sysfs_empty_value() {
+        assert!(!write_sysfs("/nonexistent_empty_val", ""));
+    }
+
+    #[test]
+    fn test_chmod_invalid_mode_string() {
+        assert!(!chmod("/nonexistent_bad_mode", "notanum"));
+    }
+
+    #[test]
+    fn test_file_exists_null_path() {
+        assert!(!file_exists("/bad\x00path"));
+    }
+
+    #[test]
+    fn test_read_sysfs_cached_negative_ttl() {
+        let r = read_sysfs_cached("/nonexistent_neg_ttl", 0);
+        assert!(r.is_none());
+    }
 }

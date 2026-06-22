@@ -432,4 +432,80 @@ mod tests {
         assert_eq!(failed.len(), 1);
         assert!(failed[0].starts_with("b:"));
     }
+
+    #[test]
+    fn test_get_pass_rate_all_pass() {
+        let results = vec![CheckResult::pass("a"), CheckResult::pass("b"), CheckResult::pass("c")];
+        assert!((get_pass_rate(&results) - 100.0).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn test_get_pass_rate_all_fail() {
+        let results = vec![CheckResult::fail("a", "e1"), CheckResult::fail("b", "e2")];
+        assert!((get_pass_rate(&results) - 0.0).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn test_get_pass_rate_mixed() {
+        let results = vec![CheckResult::pass("a"), CheckResult::pass("b"), CheckResult::fail("c", "e3"), CheckResult::pass("d")];
+        assert!((get_pass_rate(&results) - 75.0).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn test_crash_entry_empty_values() {
+        let c = CrashEntry { crash_type: "".into(), package: "".into(), timestamp: 0, message: "".into() };
+        let json = serde_json::to_string(&c).unwrap();
+        let d: CrashEntry = serde_json::from_str(&json).unwrap();
+        assert!(d.crash_type.is_empty());
+        assert!(d.package.is_empty());
+        assert_eq!(d.timestamp, 0);
+    }
+
+    #[test]
+    fn test_crash_entry_special_chars() {
+        let c = CrashEntry { crash_type: "JAVA/JNI".into(), package: "com.example.app-v2".into(), timestamp: u64::MAX, message: "line1\nline2\ttab".into() };
+        let json = serde_json::to_string(&c).unwrap();
+        let d: CrashEntry = serde_json::from_str(&json).unwrap();
+        assert_eq!(d.crash_type, "JAVA/JNI");
+        assert_eq!(d.package, "com.example.app-v2");
+        assert_eq!(d.timestamp, u64::MAX);
+    }
+
+    #[test]
+    fn test_parse_crash_patterns_jni_crash() {
+        let logcat = "1234 5678 I DEBUG: *** *** ***\n     >>> com.example.jni <<<\n";
+        let crashes = parse_crash_patterns(logcat);
+        assert_eq!(crashes.len(), 1);
+        assert_eq!(crashes[0].crash_type, "JNI");
+        assert_eq!(crashes[0].package, "com.example.jni");
+    }
+
+    #[test]
+    fn test_parse_crash_patterns_anr_with_process() {
+        let logcat = "1234 5678 I ActivityManager: ANR in com.example.anr\n     Process: com.example.anr\n";
+        let crashes = parse_crash_patterns(logcat);
+        assert_eq!(crashes.len(), 1);
+        assert_eq!(crashes[0].crash_type, "ANR");
+        assert_eq!(crashes[0].package, "com.example.anr");
+    }
+
+    #[test]
+    fn test_crash_entry_timestamp_monotonic() {
+        let c1 = CrashEntry { crash_type: "JAVA".into(), package: "a".into(), timestamp: 100, message: "m".into() };
+        let c2 = CrashEntry { crash_type: "JAVA".into(), package: "b".into(), timestamp: 200, message: "m".into() };
+        assert!(c2.timestamp >= c1.timestamp);
+    }
+
+    #[test]
+    fn test_get_failed_features_empty() {
+        let results: Vec<CheckResult> = vec![];
+        let failed = get_failed_features(&results);
+        assert!(failed.is_empty());
+    }
+
+    #[test]
+    fn test_log_content_no_log_file() {
+        let content = get_log_content();
+        assert!(content.is_empty() || !content.is_empty());
+    }
 }

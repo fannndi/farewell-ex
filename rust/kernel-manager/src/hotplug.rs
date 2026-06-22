@@ -1,4 +1,4 @@
-use crate::sysfs;
+use crate::sysfs::{self, SysfsError, SysfsResult};
 
 // ==================== CoreCtl (SmartPack) ====================
 
@@ -16,8 +16,9 @@ pub fn get_core_ctl_min_cpus(cluster: i32) -> i32 {
 /// **Sysfs path:** `/sys/devices/system/cpu/cpu*/core_ctl/min_cpus`
 /// **Root:** Required
 /// **Returns:** `true` if written successfully
-pub fn set_core_ctl_min_cpus(cluster: i32, n: i32) -> bool {
-    sysfs::write_sysfs(&format!("/sys/devices/system/cpu/cpu{}/core_ctl/min_cpus", cluster * 4), &n.to_string())
+pub fn set_core_ctl_min_cpus(cluster: i32, n: i32) -> SysfsResult<bool> {
+    let path = format!("/sys/devices/system/cpu/cpu{}/core_ctl/min_cpus", cluster * 4);
+    if sysfs::write_sysfs(&path, &n.to_string()) { Ok(true) } else { Err(SysfsError::IoError(path)) }
 }
 
 /// Get core_ctl maximum CPUs for a cluster (SmartPack).
@@ -34,8 +35,9 @@ pub fn get_core_ctl_max_cpus(cluster: i32) -> i32 {
 /// **Sysfs path:** `/sys/devices/system/cpu/cpu*/core_ctl/max_cpus`
 /// **Root:** Required
 /// **Returns:** `true` if written successfully
-pub fn set_core_ctl_max_cpus(cluster: i32, n: i32) -> bool {
-    sysfs::write_sysfs(&format!("/sys/devices/system/cpu/cpu{}/core_ctl/max_cpus", cluster * 4), &n.to_string())
+pub fn set_core_ctl_max_cpus(cluster: i32, n: i32) -> SysfsResult<bool> {
+    let path = format!("/sys/devices/system/cpu/cpu{}/core_ctl/max_cpus", cluster * 4);
+    if sysfs::write_sysfs(&path, &n.to_string()) { Ok(true) } else { Err(SysfsError::IoError(path)) }
 }
 
 /// Get core_ctl busy down threshold (SmartPack).
@@ -52,8 +54,9 @@ pub fn get_core_ctl_busy_down_threshold(cluster: i32) -> i32 {
 /// **Sysfs path:** `/sys/devices/system/cpu/cpu*/core_ctl/busy_down_thres`
 /// **Root:** Required
 /// **Returns:** `true` if written successfully
-pub fn set_core_ctl_busy_down_threshold(cluster: i32, pct: i32) -> bool {
-    sysfs::write_sysfs(&format!("/sys/devices/system/cpu/cpu{}/core_ctl/busy_down_thres", cluster * 4), &pct.to_string())
+pub fn set_core_ctl_busy_down_threshold(cluster: i32, pct: i32) -> SysfsResult<bool> {
+    let path = format!("/sys/devices/system/cpu/cpu{}/core_ctl/busy_down_thres", cluster * 4);
+    if sysfs::write_sysfs(&path, &pct.to_string()) { Ok(true) } else { Err(SysfsError::IoError(path)) }
 }
 
 /// Get core_ctl busy up threshold (SmartPack).
@@ -70,8 +73,9 @@ pub fn get_core_ctl_busy_up_threshold(cluster: i32) -> i32 {
 /// **Sysfs path:** `/sys/devices/system/cpu/cpu*/core_ctl/busy_up_thres`
 /// **Root:** Required
 /// **Returns:** `true` if written successfully
-pub fn set_core_ctl_busy_up_threshold(cluster: i32, pct: i32) -> bool {
-    sysfs::write_sysfs(&format!("/sys/devices/system/cpu/cpu{}/core_ctl/busy_up_thres", cluster * 4), &pct.to_string())
+pub fn set_core_ctl_busy_up_threshold(cluster: i32, pct: i32) -> SysfsResult<bool> {
+    let path = format!("/sys/devices/system/cpu/cpu{}/core_ctl/busy_up_thres", cluster * 4);
+    if sysfs::write_sysfs(&path, &pct.to_string()) { Ok(true) } else { Err(SysfsError::IoError(path)) }
 }
 
 /// Get core_ctl offline delay in ms (SmartPack).
@@ -88,8 +92,9 @@ pub fn get_core_ctl_offline_delay_ms(cluster: i32) -> i32 {
 /// **Sysfs path:** `/sys/devices/system/cpu/cpu*/core_ctl/offline_delay_ms`
 /// **Root:** Required
 /// **Returns:** `true` if written successfully
-pub fn set_core_ctl_offline_delay_ms(cluster: i32, ms: i32) -> bool {
-    sysfs::write_sysfs(&format!("/sys/devices/system/cpu/cpu{}/core_ctl/offline_delay_ms", cluster * 4), &ms.to_string())
+pub fn set_core_ctl_offline_delay_ms(cluster: i32, ms: i32) -> SysfsResult<bool> {
+    let path = format!("/sys/devices/system/cpu/cpu{}/core_ctl/offline_delay_ms", cluster * 4);
+    if sysfs::write_sysfs(&path, &ms.to_string()) { Ok(true) } else { Err(SysfsError::IoError(path)) }
 }
 
 // ==================== MSM Hotplug (SmartPack) ====================
@@ -108,8 +113,9 @@ pub fn get_msm_hotplug_enabled() -> bool {
 /// **Sysfs path:** `/sys/module/msm_hotplug/parameters/enabled`
 /// **Root:** Required
 /// **Returns:** `true` if written successfully
-pub fn set_msm_hotplug_enabled(enabled: bool) -> bool {
-    sysfs::write_sysfs("/sys/module/msm_hotplug/parameters/enabled", if enabled { "Y" } else { "N" })
+pub fn set_msm_hotplug_enabled(enabled: bool) -> SysfsResult<bool> {
+    let path = "/sys/module/msm_hotplug/parameters/enabled";
+    if sysfs::write_sysfs(path, if enabled { "Y" } else { "N" }) { Ok(true) } else { Err(SysfsError::IoError(path.to_string())) }
 }
 
 /// Get MSM hotplug minimum CPUs (SmartPack).
@@ -126,8 +132,9 @@ pub fn get_msm_hotplug_min_cpus() -> i32 {
 /// **Sysfs path:** `/sys/module/msm_hotplug/parameters/min_cpus`
 /// **Root:** Required
 /// **Returns:** `true` if written successfully
-pub fn set_msm_hotplug_min_cpus(n: i32) -> bool {
-    sysfs::write_sysfs("/sys/module/msm_hotplug/parameters/min_cpus", &n.to_string())
+pub fn set_msm_hotplug_min_cpus(n: i32) -> SysfsResult<bool> {
+    let path = "/sys/module/msm_hotplug/parameters/min_cpus";
+    if sysfs::write_sysfs(path, &n.to_string()) { Ok(true) } else { Err(SysfsError::IoError(path.to_string())) }
 }
 
 /// Get MSM hotplug maximum CPUs (SmartPack).
@@ -144,8 +151,9 @@ pub fn get_msm_hotplug_max_cpus() -> i32 {
 /// **Sysfs path:** `/sys/module/msm_hotplug/parameters/max_cpus`
 /// **Root:** Required
 /// **Returns:** `true` if written successfully
-pub fn set_msm_hotplug_max_cpus(n: i32) -> bool {
-    sysfs::write_sysfs("/sys/module/msm_hotplug/parameters/max_cpus", &n.to_string())
+pub fn set_msm_hotplug_max_cpus(n: i32) -> SysfsResult<bool> {
+    let path = "/sys/module/msm_hotplug/parameters/max_cpus";
+    if sysfs::write_sysfs(path, &n.to_string()) { Ok(true) } else { Err(SysfsError::IoError(path.to_string())) }
 }
 
 /// Get MSM hotplug default suspend value (SmartPack).
@@ -162,8 +170,9 @@ pub fn get_msm_hotplug_def_suspend() -> i32 {
 /// **Sysfs path:** `/sys/module/msm_hotplug/parameters/def_suspend`
 /// **Root:** Required
 /// **Returns:** `true` if written successfully
-pub fn set_msm_hotplug_def_suspend(n: i32) -> bool {
-    sysfs::write_sysfs("/sys/module/msm_hotplug/parameters/def_suspend", &n.to_string())
+pub fn set_msm_hotplug_def_suspend(n: i32) -> SysfsResult<bool> {
+    let path = "/sys/module/msm_hotplug/parameters/def_suspend";
+    if sysfs::write_sysfs(path, &n.to_string()) { Ok(true) } else { Err(SysfsError::IoError(path.to_string())) }
 }
 
 // ==================== MPDecision (SmartPack) ====================
@@ -182,8 +191,9 @@ pub fn get_mpdecision_enabled() -> bool {
 /// **Sysfs path:** `/sys/kernel/msm_mpdecision/conf/enabled`
 /// **Root:** Required
 /// **Returns:** `true` if written successfully
-pub fn set_mpdecision_enabled(enabled: bool) -> bool {
-    sysfs::write_sysfs("/sys/kernel/msm_mpdecision/conf/enabled", if enabled { "1" } else { "0" })
+pub fn set_mpdecision_enabled(enabled: bool) -> SysfsResult<bool> {
+    let path = "/sys/kernel/msm_mpdecision/conf/enabled";
+    if sysfs::write_sysfs(path, if enabled { "1" } else { "0" }) { Ok(true) } else { Err(SysfsError::IoError(path.to_string())) }
 }
 
 // ==================== Probe: hotplug drivers available ====================
@@ -263,5 +273,89 @@ mod tests {
         // On non-Android, no hotplug drivers should be available
         #[cfg(not(target_os = "android"))]
         assert!(drivers.is_empty());
+    }
+
+    #[test]
+    fn test_format_core_ctl_path_max_cluster() {
+        let cluster = 3;
+        let p = format!("/sys/devices/system/cpu/cpu{}/core_ctl/min_cpus", cluster * 4);
+        assert_eq!(p, "/sys/devices/system/cpu/cpu12/core_ctl/min_cpus");
+        let p = format!("/sys/devices/system/cpu/cpu{}/core_ctl/max_cpus", cluster * 4);
+        assert_eq!(p, "/sys/devices/system/cpu/cpu12/core_ctl/max_cpus");
+    }
+
+    #[test]
+    fn test_msm_hotplug_def_suspend_paths() {
+        assert_eq!(
+            "/sys/module/msm_hotplug/parameters/def_suspend",
+            "/sys/module/msm_hotplug/parameters/def_suspend"
+        );
+    }
+
+    #[test]
+    fn test_mpdecision_conf_path() {
+        assert_eq!(
+            "/sys/kernel/msm_mpdecision/conf/enabled",
+            "/sys/kernel/msm_mpdecision/conf/enabled"
+        );
+    }
+
+    #[test]
+    fn test_get_core_ctl_min_cpus_nonexistent() {
+        let v = get_core_ctl_min_cpus(0);
+        #[cfg(not(target_os = "android"))]
+        assert_eq!(v, -1);
+    }
+
+    #[test]
+    fn test_get_core_ctl_max_cpus_nonexistent() {
+        let v = get_core_ctl_max_cpus(0);
+        #[cfg(not(target_os = "android"))]
+        assert_eq!(v, -1);
+    }
+
+    #[test]
+    fn test_set_core_ctl_min_cpus_nonexistent() {
+        assert!(!set_core_ctl_min_cpus(0, 4));
+    }
+
+    #[test]
+    fn test_set_core_ctl_max_cpus_nonexistent() {
+        assert!(!set_core_ctl_max_cpus(0, 8));
+    }
+
+    #[test]
+    fn test_get_msm_hotplug_enabled_nonexistent() {
+        let v = get_msm_hotplug_enabled();
+        assert!(!v);
+    }
+
+    #[test]
+    fn test_set_msm_hotplug_enabled_nonexistent() {
+        assert!(!set_msm_hotplug_enabled(true));
+    }
+
+    #[test]
+    fn test_set_msm_hotplug_min_cpus_nonexistent() {
+        assert!(!set_msm_hotplug_min_cpus(2));
+    }
+
+    #[test]
+    fn test_set_msm_hotplug_max_cpus_nonexistent() {
+        assert!(!set_msm_hotplug_max_cpus(4));
+    }
+
+    #[test]
+    fn test_set_mpdecision_nonexistent() {
+        assert!(!set_mpdecision_enabled(true));
+    }
+
+    #[test]
+    fn test_core_ctl_busy_thresholds_format() {
+        let cluster = 0;
+        let down = format!("/sys/devices/system/cpu/cpu{}/core_ctl/busy_down_thres", cluster * 4);
+        assert!(down.contains("busy_down_thres"));
+        let up = format!("/sys/devices/system/cpu/cpu{}/core_ctl/busy_up_thres", cluster * 4);
+        assert!(up.contains("busy_up_thres"));
     }
 }

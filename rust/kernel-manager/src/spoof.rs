@@ -1,5 +1,5 @@
 use std::process::Command;
-use crate::sysfs;
+use crate::sysfs::{self, SysfsError, SysfsResult};
 
 // ==================== Device Property Spoof (COPG resetprop approach) ====================
 // Per-app spoofing requires Zygisk companion — marked TODO
@@ -19,8 +19,9 @@ pub const SPOOFABLE_PROPS: &[&str] = &[
 ///
 /// **Root:** Required
 /// **Returns:** `true` if resetprop succeeded
-pub fn resetprop(key: &str, value: &str) -> bool {
-    Command::new("resetprop").args(["-n", key, value]).status().is_ok()
+pub fn resetprop(key: &str, value: &str) -> SysfsResult<bool> {
+    if Command::new("resetprop").args(["-n", key, value]).status().is_ok() { Ok(true) }
+    else { Err(SysfsError::IoError(format!("resetprop -n {} {}", key, value))) }
 }
 
 /// Read a system property via `getprop`.
@@ -39,7 +40,7 @@ pub fn getprop(key: &str) -> String {
 ///
 /// **Root:** Required
 /// **Returns:** `true` if property was set
-pub fn spoof_device_property(key: &str, value: &str) -> bool {
+pub fn spoof_device_property(key: &str, value: &str) -> SysfsResult<bool> {
     resetprop(key, value)
 }
 
@@ -47,22 +48,21 @@ pub fn spoof_device_property(key: &str, value: &str) -> bool {
 ///
 /// **Root:** Required
 /// **Returns:** `true` if property was deleted
-pub fn restore_device_property(key: &str) -> bool {
-    // resetprop --delete removes the override, system default returns
-    Command::new("resetprop").args(["--delete", key]).status().is_ok()
+pub fn restore_device_property(key: &str) -> SysfsResult<bool> {
+    if Command::new("resetprop").args(["--delete", key]).status().is_ok() { Ok(true) }
+    else { Err(SysfsError::IoError(format!("resetprop --delete {}", key))) }
 }
 
 /// Restore all spoofed properties and unmount cpuinfo spoof.
 ///
 /// **Root:** Required
 /// **Returns:** `true` if all restorations succeeded
-pub fn restore_all_spoofs() -> bool {
-    let mut all_ok = true;
+pub fn restore_all_spoofs() -> SysfsResult<bool> {
     for prop in SPOOFABLE_PROPS {
-        if !restore_device_property(prop) { all_ok = false; }
+        if !restore_device_property(prop)? { return Err(SysfsError::IoError(format!("restore prop failed: {}", prop))); }
     }
-    unmount_cpuinfo_spoof();
-    all_ok
+    unmount_cpuinfo_spoof()?;
+    Ok(true)
 }
 
 // ==================== CPU Info Spoof (COPG mount --bind approach) ====================
@@ -73,15 +73,15 @@ const SPOOF_DIR: &str = "/data/adb/farewell_spoof";
 ///
 /// **Root:** Required (writes to /data/adb/)
 /// **Returns:** `true` if file was created
-pub fn create_cpuinfo_spoof(content: &str) -> bool {
+pub fn create_cpuinfo_spoof(content: &str) -> SysfsResult<bool> {
     let _ = std::fs::create_dir_all(SPOOF_DIR);
     let path = format!("{}/cpuinfo_spoof", SPOOF_DIR);
     match std::fs::write(&path, content) {
         Ok(_) => {
             let _ = Command::new("chmod").arg("444").arg(&path).status();
-            true
+            Ok(true)
         }
-        Err(_) => false,
+        Err(e) => Err(SysfsError::IoError(format!("write cpuinfo_spoof: {}", e))),
     }
 }
 
@@ -89,20 +89,21 @@ pub fn create_cpuinfo_spoof(content: &str) -> bool {
 ///
 /// **Root:** Required
 /// **Returns:** `true` if mount succeeded
-pub fn mount_cpuinfo_spoof() -> bool {
+pub fn mount_cpuinfo_spoof() -> SysfsResult<bool> {
     let spoof_path = format!("{}/cpuinfo_spoof", SPOOF_DIR);
-    if !sysfs::file_exists(&spoof_path) { return false; }
-    // Unmount first if already mounted
+    if !sysfs::file_exists(&spoof_path) { return Err(SysfsError::NotFound(spoof_path)); }
     let _ = Command::new("umount").arg("/proc/cpuinfo").status();
-    Command::new("mount").args(["--bind", &spoof_path, "/proc/cpuinfo"]).status().is_ok()
+    if Command::new("mount").args(["--bind", &spoof_path, "/proc/cpuinfo"]).status().is_ok() { Ok(true) }
+    else { Err(SysfsError::IoError("mount --bind cpuinfo_spoof failed".to_string())) }
 }
 
 /// Unmount the cpuinfo spoof.
 ///
 /// **Root:** Required
 /// **Returns:** `true` if umount succeeded
-pub fn unmount_cpuinfo_spoof() -> bool {
-    Command::new("umount").arg("/proc/cpuinfo").status().is_ok()
+pub fn unmount_cpuinfo_spoof() -> SysfsResult<bool> {
+    if Command::new("umount").arg("/proc/cpuinfo").status().is_ok() { Ok(true) }
+    else { Err(SysfsError::IoError("umount cpuinfo failed".to_string())) }
 }
 
 /// Check if cpuinfo is currently spoofed via mount.
@@ -131,7 +132,7 @@ pub fn is_cpuinfo_spoofed() -> bool {
 /// ```
 /// spoof::apply_device_profile("pixel");
 /// ```
-pub fn apply_device_profile(profile: &str) -> bool {
+pub fn apply_device_profile(profile: &str) -> SysfsResult<bool> {
     let props: Vec<(&str, &str)> = match profile {
         "pixel" => vec![
             ("ro.product.model", "Pixel 8 Pro"),
@@ -189,13 +190,12 @@ pub fn apply_device_profile(profile: &str) -> bool {
             ("ro.soc.manufacturer", "Qualcomm"),
             ("ro.soc.model", "SM8650"),
         ],
-        _ => return false,
+        _ => return Err(SysfsError::IoError(format!("unknown device profile: {}", profile))),
     };
-    let mut all_ok = true;
     for (key, value) in props {
-        if !resetprop(key, value) { all_ok = false; }
+        if !resetprop(key, value)? { return Err(SysfsError::IoError(format!("resetprop {} failed", key))); }
     }
-    all_ok
+    Ok(true)
 }
 
 /// Generate a Magisk module for persistent device spoofing.

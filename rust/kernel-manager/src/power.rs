@@ -1,4 +1,4 @@
-use crate::sysfs;
+use crate::sysfs::{self, SysfsError, SysfsResult};
 use serde::{Deserialize, Serialize};
 use std::sync::Once;
 
@@ -160,7 +160,7 @@ pub fn read_battery_status() -> String {
 /// **Sysfs path:** `/sys/class/power_supply/battery/input_suspend` and others
 /// **Root:** Required
 /// **Returns:** `true` if bypass was toggled
-pub fn set_bypass_charging(enable: bool) -> bool {
+pub fn set_bypass_charging(enable: bool) -> SysfsResult<bool> {
     let val = if enable { "1" } else { "0" };
     let paths = [
         "/sys/class/power_supply/battery/input_suspend",
@@ -172,10 +172,11 @@ pub fn set_bypass_charging(enable: bool) -> bool {
             sysfs::chmod(path, "644");
             let ok = sysfs::write_sysfs(path, val);
             sysfs::chmod(path, "444");
-            return ok;
+            if ok { return Ok(true); }
+            return Err(SysfsError::IoError(path.to_string()));
         }
     }
-    false
+    Err(SysfsError::NotFound("no bypass path found".to_string()))
 }
 
 // ==================== Bypass Charging Auto-Discovery (AZenith) ====================
@@ -231,11 +232,12 @@ pub fn get_constant_charge_current_max() -> i32 {
 /// **Sysfs path:** `/sys/class/power_supply/battery/constant_charge_current_max`
 /// **Root:** Required
 /// **Returns:** `true` if written successfully
-pub fn set_constant_charge_current_max(ua: i32) -> bool {
+pub fn set_constant_charge_current_max(ua: i32) -> SysfsResult<bool> {
     let path = "/sys/class/power_supply/battery/constant_charge_current_max";
     sysfs::chmod(path, "644");
     let ok = sysfs::write_sysfs(path, &ua.to_string());
-    sysfs::chmod(path, "444"); ok
+    sysfs::chmod(path, "444");
+    if ok { Ok(true) } else { Err(SysfsError::IoError(path.to_string())) }
 }
 
 /// Read USB max input current in microamps (SmartPack).
@@ -252,11 +254,25 @@ pub fn get_usb_current_max() -> i32 {
 /// **Sysfs path:** `/sys/class/power_supply/usb/current_max`
 /// **Root:** Required
 /// **Returns:** `true` if written successfully
-pub fn set_usb_current_max(ua: i32) -> bool {
+pub fn set_usb_current_max(ua: i32) -> SysfsResult<bool> {
     let path = "/sys/class/power_supply/usb/current_max";
     sysfs::chmod(path, "644");
     let ok = sysfs::write_sysfs(path, &ua.to_string());
-    sysfs::chmod(path, "444"); ok
+    sysfs::chmod(path, "444");
+    if ok { Ok(true) } else { Err(SysfsError::IoError(path.to_string())) }
+}
+
+pub fn get_charge_control_limit() -> i32 {
+    sysfs::read_sysfs_int("/sys/class/power_supply/battery/charge_control_limit", 1000).unwrap_or(-1) as i32
+}
+
+pub fn set_charge_control_limit(limit: i32) -> SysfsResult<bool> {
+    let path = "/sys/class/power_supply/battery/charge_control_limit";
+    if !sysfs::file_exists(path) { return Err(SysfsError::NotFound(path.to_string())); }
+    sysfs::chmod(path, "644");
+    let ok = sysfs::write_sysfs(path, &limit.to_string());
+    sysfs::chmod(path, "444");
+    if ok { Ok(true) } else { Err(SysfsError::IoError(path.to_string())) }
 }
 
 #[cfg(test)]
@@ -313,5 +329,70 @@ mod tests {
     fn test_constant_charge_current_max_paths() {
         let p = "/sys/class/power_supply/battery/constant_charge_current_max";
         assert_eq!(p, "/sys/class/power_supply/battery/constant_charge_current_max");
+    }
+
+    #[test]
+    fn test_battery_info_negative_current() {
+        let b = BatteryInfo { level: 50, temp: 250, voltage: 3800, current: -300, charging: false, health: "Good".into(), cycle_count: 0, capacity_level: 80.0, status: "Discharging".into() };
+        let json = serde_json::to_string(&b).unwrap();
+        let d: BatteryInfo = serde_json::from_str(&json).unwrap();
+        assert_eq!(d.current, -300);
+        assert!(!d.charging);
+    }
+
+    #[test]
+    fn test_battery_info_max_boundary() {
+        let b = BatteryInfo { level: 100, temp: 0, voltage: 0, current: i32::MAX, charging: true, health: String::new(), cycle_count: i32::MAX, capacity_level: 100.0, status: String::new() };
+        let json = serde_json::to_string(&b).unwrap();
+        let d: BatteryInfo = serde_json::from_str(&json).unwrap();
+        assert_eq!(d.level, 100);
+        assert_eq!(d.current, i32::MAX);
+        assert_eq!(d.cycle_count, i32::MAX);
+    }
+
+    #[test]
+    fn test_battery_info_i32_min_values() {
+        let b = BatteryInfo { level: 0, temp: i32::MIN, voltage: 0, current: i32::MIN, charging: false, health: "Dead".into(), cycle_count: 0, capacity_level: 0.0, status: String::new() };
+        let json = serde_json::to_string(&b).unwrap();
+        let d: BatteryInfo = serde_json::from_str(&json).unwrap();
+        assert_eq!(d.temp, i32::MIN);
+    }
+
+    #[test]
+    fn test_battery_info_empty_strings() {
+        let b = BatteryInfo { level: 0, temp: 0, voltage: 0, current: 0, charging: false, health: "".into(), cycle_count: 0, capacity_level: 0.0, status: "".into() };
+        let json = serde_json::to_string(&b).unwrap();
+        let d: BatteryInfo = serde_json::from_str(&json).unwrap();
+        assert!(d.health.is_empty());
+        assert!(d.status.is_empty());
+    }
+
+    #[test]
+    fn test_set_bypass_charging_no_nodes() {
+        #[cfg(not(target_os = "android"))]
+        assert!(!set_bypass_charging(true));
+    }
+
+    #[test]
+    fn test_discover_bypass_charging_node_none() {
+        #[cfg(not(target_os = "android"))]
+        assert!(discover_bypass_charging_node().is_none());
+    }
+
+    #[test]
+    fn test_read_battery_level_nonexistent() {
+        let level = read_battery_level();
+        #[cfg(not(target_os = "android"))]
+        assert_eq!(level, 0);
+    }
+
+    #[test]
+    fn test_set_constant_charge_current_max_nonexistent() {
+        assert!(!set_constant_charge_current_max(1000000));
+    }
+
+    #[test]
+    fn test_set_usb_current_max_nonexistent() {
+        assert!(!set_usb_current_max(2000000));
     }
 }

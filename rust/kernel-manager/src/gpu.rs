@@ -1,4 +1,4 @@
-use crate::sysfs;
+use crate::sysfs::{self, SysfsError, SysfsResult};
 use once_cell::sync::{Lazy, OnceCell};
 use std::sync::Mutex;
 
@@ -138,15 +138,14 @@ pub fn get_gpu_driver_info() -> String {
 /// **Sysfs path:** `/sys/class/kgsl/kgsl-3d0/min_pwrlevel`, `max_pwrlevel`
 /// **Root:** Required
 /// **Returns:** `true` if both levels written successfully
-pub fn set_gpu_power_levels(min_pwr: i32, max_pwr: i32) -> bool {
+pub fn set_gpu_power_levels(min_pwr: i32, max_pwr: i32) -> SysfsResult<bool> {
     let base = "/sys/class/kgsl/kgsl-3d0";
-    let mut ok = true;
     for (path, val) in &[(format!("{}/min_pwrlevel", base), min_pwr), (format!("{}/max_pwrlevel", base), max_pwr)] {
         sysfs::chmod(path, "644");
-        if !sysfs::write_sysfs(path, &val.to_string()) { ok = false; }
+        if !sysfs::write_sysfs(path, &val.to_string()) { return Err(SysfsError::IoError(path.clone())); }
         sysfs::chmod(path, "444");
     }
-    ok
+    Ok(true)
 }
 
 /// Force GPU clock/bus/rail state on or off.
@@ -154,11 +153,11 @@ pub fn set_gpu_power_levels(min_pwr: i32, max_pwr: i32) -> bool {
 /// **Sysfs path:** `/sys/class/kgsl/kgsl-3d0/{state}`
 /// **Root:** Required
 /// **Returns:** `true` if written successfully
-pub fn set_gpu_force(state: &str, value: bool) -> bool {
+pub fn set_gpu_force(state: &str, value: bool) -> SysfsResult<bool> {
     let path = format!("/sys/class/kgsl/kgsl-3d0/{}", state);
     sysfs::chmod(&path, "644");
-    let ok = sysfs::write_sysfs(&path, if value { "1" } else { "0" });
-    sysfs::chmod(&path, "444"); ok
+    if sysfs::write_sysfs(&path, if value { "1" } else { "0" }) { sysfs::chmod(&path, "444"); Ok(true) }
+    else { Err(SysfsError::IoError(path)) }
 }
 
 /// Set GPU frequency min/max limits via devfreq.
@@ -166,13 +165,17 @@ pub fn set_gpu_force(state: &str, value: bool) -> bool {
 /// **Sysfs path:** `/sys/class/kgsl/kgsl-3d0/devfreq/min_freq`, `max_freq`
 /// **Root:** Required
 /// **Returns:** `true` if both limits written successfully
-pub fn set_gpu_freq_limit(min_mhz: i32, max_mhz: i32) -> bool {
+pub fn set_gpu_freq_limit(min_mhz: i32, max_mhz: i32) -> SysfsResult<bool> {
     let base = "/sys/class/kgsl/kgsl-3d0";
     sysfs::chmod(&format!("{}/devfreq/min_freq", base), "644");
     sysfs::chmod(&format!("{}/devfreq/max_freq", base), "644");
-    let r1 = sysfs::write_sysfs(&format!("{}/devfreq/min_freq", base), &format!("{}", min_mhz * 1_000_000));
-    let r2 = sysfs::write_sysfs(&format!("{}/devfreq/max_freq", base), &format!("{}", max_mhz * 1_000_000));
-    r1 && r2
+    if !sysfs::write_sysfs(&format!("{}/devfreq/min_freq", base), &format!("{}", min_mhz * 1_000_000)) {
+        return Err(SysfsError::IoError(format!("{}/devfreq/min_freq", base)));
+    }
+    if !sysfs::write_sysfs(&format!("{}/devfreq/max_freq", base), &format!("{}", max_mhz * 1_000_000)) {
+        return Err(SysfsError::IoError(format!("{}/devfreq/max_freq", base)));
+    }
+    Ok(true)
 }
 
 // ==================== Force Params (Encore) ====================
@@ -182,9 +185,11 @@ pub fn set_gpu_freq_limit(min_mhz: i32, max_mhz: i32) -> bool {
 /// **Sysfs path:** `/sys/class/kgsl/kgsl-3d0/bus_split`
 /// **Root:** Required
 /// **Returns:** `true` if written successfully
-pub fn set_gpu_bus_split(enabled: bool) -> bool {
+pub fn set_gpu_bus_split(enabled: bool) -> SysfsResult<bool> {
     let path = "/sys/class/kgsl/kgsl-3d0/bus_split";
-    sysfs::chmod(path, "644"); let ok = sysfs::write_sysfs(path, if enabled { "1" } else { "0" }); sysfs::chmod(path, "444"); ok
+    sysfs::chmod(path, "644");
+    if sysfs::write_sysfs(path, if enabled { "1" } else { "0" }) { sysfs::chmod(path, "444"); Ok(true) }
+    else { Err(SysfsError::IoError(path.to_string())) }
 }
 
 /// Enable/disable GPU thermal throttling.
@@ -192,9 +197,11 @@ pub fn set_gpu_bus_split(enabled: bool) -> bool {
 /// **Sysfs path:** `/sys/class/kgsl/kgsl-3d0/throttling`
 /// **Root:** Required
 /// **Returns:** `true` if written successfully
-pub fn set_gpu_throttling(enabled: bool) -> bool {
+pub fn set_gpu_throttling(enabled: bool) -> SysfsResult<bool> {
     let path = "/sys/class/kgsl/kgsl-3d0/throttling";
-    sysfs::chmod(path, "644"); let ok = sysfs::write_sysfs(path, if enabled { "1" } else { "0" }); sysfs::chmod(path, "444"); ok
+    sysfs::chmod(path, "644");
+    if sysfs::write_sysfs(path, if enabled { "1" } else { "0" }) { sysfs::chmod(path, "444"); Ok(true) }
+    else { Err(SysfsError::IoError(path.to_string())) }
 }
 
 /// Set GPU idle timer value in milliseconds.
@@ -202,9 +209,11 @@ pub fn set_gpu_throttling(enabled: bool) -> bool {
 /// **Sysfs path:** `/sys/class/kgsl/kgsl-3d0/idle_timer`
 /// **Root:** Required
 /// **Returns:** `true` if written successfully
-pub fn set_gpu_idle_timer(ms: i32) -> bool {
+pub fn set_gpu_idle_timer(ms: i32) -> SysfsResult<bool> {
     let path = "/sys/class/kgsl/kgsl-3d0/idle_timer";
-    sysfs::chmod(path, "644"); let ok = sysfs::write_sysfs(path, &ms.to_string()); sysfs::chmod(path, "444"); ok
+    sysfs::chmod(path, "644");
+    if sysfs::write_sysfs(path, &ms.to_string()) { sysfs::chmod(path, "444"); Ok(true) }
+    else { Err(SysfsError::IoError(path.to_string())) }
 }
 
 /// Set GPU maximum clock in Hz.
@@ -212,9 +221,11 @@ pub fn set_gpu_idle_timer(ms: i32) -> bool {
 /// **Sysfs path:** `/sys/class/kgsl/kgsl-3d0/max_gpuclk`
 /// **Root:** Required
 /// **Returns:** `true` if written successfully
-pub fn set_gpu_max_gpuclk(hz: i64) -> bool {
+pub fn set_gpu_max_gpuclk(hz: i64) -> SysfsResult<bool> {
     let path = "/sys/class/kgsl/kgsl-3d0/max_gpuclk";
-    sysfs::chmod(path, "644"); let ok = sysfs::write_sysfs(path, &hz.to_string()); sysfs::chmod(path, "444"); ok
+    sysfs::chmod(path, "644");
+    if sysfs::write_sysfs(path, &hz.to_string()) { sysfs::chmod(path, "444"); Ok(true) }
+    else { Err(SysfsError::IoError(path.to_string())) }
 }
 
 /// Set GPU devfreq governor.
@@ -222,9 +233,11 @@ pub fn set_gpu_max_gpuclk(hz: i64) -> bool {
 /// **Sysfs path:** `/sys/class/kgsl/kgsl-3d0/devfreq/governor`
 /// **Root:** Required
 /// **Returns:** `true` if written successfully
-pub fn set_gpu_devfreq_governor(governor: &str) -> bool {
+pub fn set_gpu_devfreq_governor(governor: &str) -> SysfsResult<bool> {
     let path = "/sys/class/kgsl/kgsl-3d0/devfreq/governor";
-    sysfs::chmod(path, "644"); let ok = sysfs::write_sysfs(path, governor); sysfs::chmod(path, "444"); ok
+    sysfs::chmod(path, "644");
+    if sysfs::write_sysfs(path, governor) { sysfs::chmod(path, "444"); Ok(true) }
+    else { Err(SysfsError::IoError(path.to_string())) }
 }
 
 // ==================== Adreno Idler (ZKM) ====================
@@ -234,10 +247,12 @@ pub fn set_gpu_devfreq_governor(governor: &str) -> bool {
 /// **Sysfs path:** `/sys/module/adreno_idler/parameters/adreno_idler_active`
 /// **Root:** Required
 /// **Returns:** `true` if written successfully
-pub fn set_adreno_idler_active(active: bool) -> bool {
+pub fn set_adreno_idler_active(active: bool) -> SysfsResult<bool> {
     let path = "/sys/module/adreno_idler/parameters/adreno_idler_active";
-    if !sysfs::file_exists(path) { return false; }
-    sysfs::chmod(path, "644"); let ok = sysfs::write_sysfs(path, if active { "Y" } else { "N" }); sysfs::chmod(path, "444"); ok
+    if !sysfs::file_exists(path) { return Err(SysfsError::NotFound(path.to_string())); }
+    sysfs::chmod(path, "644");
+    if sysfs::write_sysfs(path, if active { "Y" } else { "N" }) { sysfs::chmod(path, "444"); Ok(true) }
+    else { Err(SysfsError::IoError(path.to_string())) }
 }
 
 /// Set Adreno Idler idle wait in ms (ZKM).
@@ -245,10 +260,12 @@ pub fn set_adreno_idler_active(active: bool) -> bool {
 /// **Sysfs path:** `/sys/module/adreno_idler/parameters/adreno_idler_idlewait`
 /// **Root:** Required
 /// **Returns:** `true` if written successfully
-pub fn set_adreno_idler_idlewait(ms: i32) -> bool {
+pub fn set_adreno_idler_idlewait(ms: i32) -> SysfsResult<bool> {
     let path = "/sys/module/adreno_idler/parameters/adreno_idler_idlewait";
-    if !sysfs::file_exists(path) { return false; }
-    sysfs::chmod(path, "644"); let ok = sysfs::write_sysfs(path, &ms.to_string()); sysfs::chmod(path, "444"); ok
+    if !sysfs::file_exists(path) { return Err(SysfsError::NotFound(path.to_string())); }
+    sysfs::chmod(path, "644");
+    if sysfs::write_sysfs(path, &ms.to_string()) { sysfs::chmod(path, "444"); Ok(true) }
+    else { Err(SysfsError::IoError(path.to_string())) }
 }
 
 /// Set Adreno Idler down-differential percentage (ZKM).
@@ -256,10 +273,12 @@ pub fn set_adreno_idler_idlewait(ms: i32) -> bool {
 /// **Sysfs path:** `/sys/module/adreno_idler/parameters/adreno_idler_downdifferential`
 /// **Root:** Required
 /// **Returns:** `true` if written successfully
-pub fn set_adreno_idler_downdifferential(pct: i32) -> bool {
+pub fn set_adreno_idler_downdifferential(pct: i32) -> SysfsResult<bool> {
     let path = "/sys/module/adreno_idler/parameters/adreno_idler_downdifferential";
-    if !sysfs::file_exists(path) { return false; }
-    sysfs::chmod(path, "644"); let ok = sysfs::write_sysfs(path, &pct.to_string()); sysfs::chmod(path, "444"); ok
+    if !sysfs::file_exists(path) { return Err(SysfsError::NotFound(path.to_string())); }
+    sysfs::chmod(path, "644");
+    if sysfs::write_sysfs(path, &pct.to_string()) { sysfs::chmod(path, "444"); Ok(true) }
+    else { Err(SysfsError::IoError(path.to_string())) }
 }
 
 /// Set Adreno Idler idle workload value (ZKM).
@@ -267,10 +286,12 @@ pub fn set_adreno_idler_downdifferential(pct: i32) -> bool {
 /// **Sysfs path:** `/sys/module/adreno_idler/parameters/adreno_idler_idleworkload`
 /// **Root:** Required
 /// **Returns:** `true` if written successfully
-pub fn set_adreno_idler_idleworkload(val: i32) -> bool {
+pub fn set_adreno_idler_idleworkload(val: i32) -> SysfsResult<bool> {
     let path = "/sys/module/adreno_idler/parameters/adreno_idler_idleworkload";
-    if !sysfs::file_exists(path) { return false; }
-    sysfs::chmod(path, "644"); let ok = sysfs::write_sysfs(path, &val.to_string()); sysfs::chmod(path, "444"); ok
+    if !sysfs::file_exists(path) { return Err(SysfsError::NotFound(path.to_string())); }
+    sysfs::chmod(path, "644");
+    if sysfs::write_sysfs(path, &val.to_string()) { sysfs::chmod(path, "444"); Ok(true) }
+    else { Err(SysfsError::IoError(path.to_string())) }
 }
 
 // ==================== Simple GPU Algorithm (ZKM) ====================
@@ -280,10 +301,12 @@ pub fn set_adreno_idler_idleworkload(val: i32) -> bool {
 /// **Sysfs path:** `/sys/module/simple_gpu_algorithm/parameters/simple_gpu_activate`
 /// **Root:** Required
 /// **Returns:** `true` if written successfully
-pub fn set_simple_gpu_activate(active: bool) -> bool {
+pub fn set_simple_gpu_activate(active: bool) -> SysfsResult<bool> {
     let path = "/sys/module/simple_gpu_algorithm/parameters/simple_gpu_activate";
-    if !sysfs::file_exists(path) { return false; }
-    sysfs::chmod(path, "644"); let ok = sysfs::write_sysfs(path, if active { "Y" } else { "N" }); sysfs::chmod(path, "444"); ok
+    if !sysfs::file_exists(path) { return Err(SysfsError::NotFound(path.to_string())); }
+    sysfs::chmod(path, "644");
+    if sysfs::write_sysfs(path, if active { "Y" } else { "N" }) { sysfs::chmod(path, "444"); Ok(true) }
+    else { Err(SysfsError::IoError(path.to_string())) }
 }
 
 /// Set Simple GPU Algorithm laziness value (ZKM).
@@ -291,10 +314,12 @@ pub fn set_simple_gpu_activate(active: bool) -> bool {
 /// **Sysfs path:** `/sys/module/simple_gpu_algorithm/parameters/simple_laziness`
 /// **Root:** Required
 /// **Returns:** `true` if written successfully
-pub fn set_simple_gpu_laziness(val: i32) -> bool {
+pub fn set_simple_gpu_laziness(val: i32) -> SysfsResult<bool> {
     let path = "/sys/module/simple_gpu_algorithm/parameters/simple_laziness";
-    if !sysfs::file_exists(path) { return false; }
-    sysfs::chmod(path, "644"); let ok = sysfs::write_sysfs(path, &val.to_string()); sysfs::chmod(path, "444"); ok
+    if !sysfs::file_exists(path) { return Err(SysfsError::NotFound(path.to_string())); }
+    sysfs::chmod(path, "644");
+    if sysfs::write_sysfs(path, &val.to_string()) { sysfs::chmod(path, "444"); Ok(true) }
+    else { Err(SysfsError::IoError(path.to_string())) }
 }
 
 /// Set Simple GPU Algorithm ramp threshold (ZKM).
@@ -302,10 +327,12 @@ pub fn set_simple_gpu_laziness(val: i32) -> bool {
 /// **Sysfs path:** `/sys/module/simple_gpu_algorithm/parameters/simple_ramp_threshold`
 /// **Root:** Required
 /// **Returns:** `true` if written successfully
-pub fn set_simple_gpu_ramp_threshold(val: i32) -> bool {
+pub fn set_simple_gpu_ramp_threshold(val: i32) -> SysfsResult<bool> {
     let path = "/sys/module/simple_gpu_algorithm/parameters/simple_ramp_threshold";
-    if !sysfs::file_exists(path) { return false; }
-    sysfs::chmod(path, "644"); let ok = sysfs::write_sysfs(path, &val.to_string()); sysfs::chmod(path, "444"); ok
+    if !sysfs::file_exists(path) { return Err(SysfsError::NotFound(path.to_string())); }
+    sysfs::chmod(path, "644");
+    if sysfs::write_sysfs(path, &val.to_string()) { sysfs::chmod(path, "444"); Ok(true) }
+    else { Err(SysfsError::IoError(path.to_string())) }
 }
 
 // ==================== Bus DCVS (ZKM) ====================
@@ -353,14 +380,18 @@ pub fn get_bus_dcvs_freq(bus_name: &str) -> Vec<i32> {
 /// **Sysfs path:** `/sys/devices/system/cpu/bus_dcvs/*/min_freq`, `max_freq`
 /// **Root:** Required
 /// **Returns:** `true` if both limits written successfully
-pub fn set_bus_dcvs_freq(bus_name: &str, min_freq: i32, max_freq: i32) -> bool {
+pub fn set_bus_dcvs_freq(bus_name: &str, min_freq: i32, max_freq: i32) -> SysfsResult<bool> {
     let base = "/sys/devices/system/cpu/bus_dcvs";
     sysfs::chmod(&format!("{}/{}/min_freq", base, bus_name), "644");
     sysfs::chmod(&format!("{}/{}/max_freq", base, bus_name), "644");
     sysfs::write_sysfs(&format!("{}/{}/min_freq", base, bus_name), "0");
-    let r1 = sysfs::write_sysfs(&format!("{}/{}/max_freq", base, bus_name), &format!("{}", max_freq * 1000));
-    let r2 = sysfs::write_sysfs(&format!("{}/{}/min_freq", base, bus_name), &format!("{}", min_freq * 1000));
-    r1 && r2
+    if !sysfs::write_sysfs(&format!("{}/{}/max_freq", base, bus_name), &format!("{}", max_freq * 1000)) {
+        return Err(SysfsError::IoError(format!("{}/{}/max_freq", base, bus_name)));
+    }
+    if !sysfs::write_sysfs(&format!("{}/{}/min_freq", base, bus_name), &format!("{}", min_freq * 1000)) {
+        return Err(SysfsError::IoError(format!("{}/{}/min_freq", base, bus_name)));
+    }
+    Ok(true)
 }
 
 // ==================== Adrenoboost (SmartPack) ====================
@@ -379,12 +410,12 @@ pub fn get_adrenoboost() -> i32 {
 /// **Sysfs path:** `/sys/module/adrenoboost/parameters/adrenoboost`
 /// **Root:** Required
 /// **Returns:** `true` if written successfully
-pub fn set_adrenoboost(val: i32) -> bool {
+pub fn set_adrenoboost(val: i32) -> SysfsResult<bool> {
     let v = val.clamp(0, 2);
     let path = "/sys/module/adrenoboost/parameters/adrenoboost";
     sysfs::chmod(path, "644");
-    let ok = sysfs::write_sysfs(path, &v.to_string());
-    sysfs::chmod(path, "444"); ok
+    if sysfs::write_sysfs(path, &v.to_string()) { sysfs::chmod(path, "444"); Ok(true) }
+    else { Err(SysfsError::IoError(path.to_string())) }
 }
 
 // ==================== Display Modes (SmartPack) ====================
@@ -406,8 +437,9 @@ pub fn get_display_modes() -> Vec<String> {
 /// **Sysfs path:** `/sys/devices/virtual/graphics/fb0/mode`
 /// **Root:** Required
 /// **Returns:** `true` if written successfully
-pub fn set_display_mode(mode: &str) -> bool {
-    sysfs::write_sysfs("/sys/devices/virtual/graphics/fb0/mode", mode)
+pub fn set_display_mode(mode: &str) -> SysfsResult<bool> {
+    let path = "/sys/devices/virtual/graphics/fb0/mode";
+    if sysfs::write_sysfs(path, mode) { Ok(true) } else { Err(SysfsError::IoError(path.to_string())) }
 }
 
 #[cfg(test)]
@@ -482,5 +514,83 @@ mod tests {
             "/sys/module/simple_gpu_algorithm/parameters/simple_gpu_activate",
             "/sys/module/simple_gpu_algorithm/parameters/simple_gpu_activate"
         );
+    }
+
+    #[test]
+    fn test_gpu_bus_dcvs_know_paths() {
+        let p = format!("/sys/devices/system/cpu/bus_dcvs/{}/min_freq", "DDR");
+        assert_eq!(p, "/sys/devices/system/cpu/bus_dcvs/DDR/min_freq");
+    }
+
+    #[test]
+    fn test_set_adrenoboost_clamps() {
+        // Non-Android: none of these succeed
+        assert!(!set_adrenoboost(-1));
+        assert!(!set_adrenoboost(0));
+        assert!(!set_adrenoboost(1));
+        assert!(!set_adrenoboost(5));
+    }
+
+    #[test]
+    fn test_get_adrenoboost_nonexistent() {
+        let v = get_adrenoboost();
+        #[cfg(not(target_os = "android"))]
+        assert_eq!(v, 0);
+    }
+
+    #[test]
+    fn test_set_gpu_force_with_known_param() {
+        // known QCOM paths: force_clk_on, force_bus_on, force_rail_on
+        let p = format!("/sys/class/kgsl/kgsl-3d0/{}", "force_clk_on");
+        assert_eq!(p, "/sys/class/kgsl/kgsl-3d0/force_clk_on");
+        let p = format!("/sys/class/kgsl/kgsl-3d0/{}", "force_bus_on");
+        assert_eq!(p, "/sys/class/kgsl/kgsl-3d0/force_bus_on");
+        let p = format!("/sys/class/kgsl/kgsl-3d0/{}", "force_rail_on");
+        assert_eq!(p, "/sys/class/kgsl/kgsl-3d0/force_rail_on");
+    }
+
+    #[test]
+    fn test_set_gpu_power_levels_invalid() {
+        assert!(!set_gpu_power_levels(-1, -1));
+    }
+
+    #[test]
+    fn test_get_display_modes_nonexistent() {
+        let modes = get_display_modes();
+        #[cfg(not(target_os = "android"))]
+        assert!(modes.is_empty());
+    }
+
+    #[test]
+    fn test_get_gpu_available_frequencies_nonexistent() {
+        let freqs = get_gpu_available_frequencies();
+        #[cfg(not(target_os = "android"))]
+        assert!(freqs.is_empty());
+    }
+
+    #[test]
+    fn test_get_gpu_available_policies_nonexistent() {
+        let policies = get_gpu_available_policies();
+        #[cfg(not(target_os = "android"))]
+        assert!(policies.is_empty());
+    }
+
+    #[test]
+    fn test_get_gpu_driver_info_nonexistent() {
+        let info = get_gpu_driver_info();
+        #[cfg(not(target_os = "android"))]
+        assert_eq!(info, "unknown");
+    }
+
+    #[test]
+    fn test_get_bus_dcvs_components_empty() {
+        let comps = get_bus_dcvs_components();
+        #[cfg(not(target_os = "android"))]
+        assert!(comps.is_empty());
+    }
+
+    #[test]
+    fn test_set_display_mode_nonexistent() {
+        assert!(!set_display_mode("1920x1080"));
     }
 }

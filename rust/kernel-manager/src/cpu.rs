@@ -1,4 +1,4 @@
-use crate::sysfs;
+use crate::sysfs::{self, SysfsError, SysfsResult};
 use once_cell::sync::{Lazy, OnceCell};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -261,17 +261,16 @@ pub fn get_cpu_model() -> String {
 /// ```
 /// cpu::set_governor("performance");
 /// ```
-pub fn set_governor(governor: &str) -> bool {
+pub fn set_governor(governor: &str) -> SysfsResult<bool> {
     let clusters = detect_cpu_clusters();
-    let mut all_ok = true;
     for cluster in &clusters {
         for core in &cluster.cores {
             let path = format!("/sys/devices/system/cpu/cpu{}/cpufreq/scaling_governor", core);
             sysfs::chmod(&path, "644");
-            if !sysfs::write_sysfs(&path, governor) { all_ok = false; }
+            if !sysfs::write_sysfs(&path, governor) { return Err(SysfsError::IoError(path)); }
         }
     }
-    all_ok
+    Ok(true)
 }
 
 /// Set min/max frequency limits for a specific CPU core.
@@ -279,14 +278,14 @@ pub fn set_governor(governor: &str) -> bool {
 /// **Sysfs path:** `/sys/devices/system/cpu/cpu*/cpufreq/scaling_min_freq`, `scaling_max_freq`
 /// **Root:** Required
 /// **Returns:** `true` if both limits written successfully
-pub fn set_freq_limit(core: i32, min: i32, max: i32) -> bool {
+pub fn set_freq_limit(core: i32, min: i32, max: i32) -> SysfsResult<bool> {
     let min_path = format!("/sys/devices/system/cpu/cpu{}/cpufreq/scaling_min_freq", core);
     let max_path = format!("/sys/devices/system/cpu/cpu{}/cpufreq/scaling_max_freq", core);
     sysfs::chmod(&min_path, "644");
     sysfs::chmod(&max_path, "644");
-    let r1 = sysfs::write_sysfs(&min_path, &format!("{}", min * 1000));
-    let r2 = sysfs::write_sysfs(&max_path, &format!("{}", max * 1000));
-    r1 && r2
+    if !sysfs::write_sysfs(&min_path, &format!("{}", min * 1000)) { return Err(SysfsError::IoError(min_path)); }
+    if !sysfs::write_sysfs(&max_path, &format!("{}", max * 1000)) { return Err(SysfsError::IoError(max_path)); }
+    Ok(true)
 }
 
 /// Bring a CPU core online or offline (core 0 cannot be offlined).
@@ -294,12 +293,13 @@ pub fn set_freq_limit(core: i32, min: i32, max: i32) -> bool {
 /// **Sysfs path:** `/sys/devices/system/cpu/cpu*/online`
 /// **Root:** Required
 /// **Returns:** `true` if the core state was changed
-pub fn set_core_online(core: i32, online: bool) -> bool {
-    if core == 0 { return false; } // cpu0 cannot be offlined
+pub fn set_core_online(core: i32, online: bool) -> SysfsResult<bool> {
+    if core == 0 { return Err(SysfsError::IoError("core 0 cannot be offlined".to_string())); }
     let path = format!("/sys/devices/system/cpu/cpu{}/online", core);
     sysfs::chmod(&path, "644");
     let ok = sysfs::write_sysfs(&path, if online { "1" } else { "0" });
-    sysfs::chmod(&path, "444"); ok
+    sysfs::chmod(&path, "444");
+    if ok { Ok(true) } else { Err(SysfsError::IoError(path)) }
 }
 
 /// Get available CPU governors for a specific core.
@@ -334,12 +334,12 @@ pub fn get_available_frequencies(cpu: i32) -> Vec<i32> {
 /// **Sysfs path:** `/sys/kernel/cpufreq_hardlimit/scaling_max_freq`
 /// **Root:** Required
 /// **Returns:** `true` if written successfully
-pub fn set_cpufreq_hardlimit_max(freq_khz: i64) -> bool {
+pub fn set_cpufreq_hardlimit_max(freq_khz: i64) -> SysfsResult<bool> {
     let path = "/sys/kernel/cpufreq_hardlimit/scaling_max_freq";
-    if !sysfs::file_exists(path) { return false; }
+    if !sysfs::file_exists(path) { return Err(SysfsError::NotFound(path.to_string())); }
     sysfs::chmod(path, "644");
-    let ok = sysfs::write_sysfs(path, &freq_khz.to_string());
-    sysfs::chmod(path, "444"); ok
+    if sysfs::write_sysfs(path, &freq_khz.to_string()) { sysfs::chmod(path, "444"); Ok(true) }
+    else { Err(SysfsError::IoError(path.to_string())) }
 }
 
 /// Set SmartPack CPU frequency hard-limit minimum.
@@ -347,12 +347,12 @@ pub fn set_cpufreq_hardlimit_max(freq_khz: i64) -> bool {
 /// **Sysfs path:** `/sys/kernel/cpufreq_hardlimit/scaling_min_freq`
 /// **Root:** Required
 /// **Returns:** `true` if written successfully
-pub fn set_cpufreq_hardlimit_min(freq_khz: i64) -> bool {
+pub fn set_cpufreq_hardlimit_min(freq_khz: i64) -> SysfsResult<bool> {
     let path = "/sys/kernel/cpufreq_hardlimit/scaling_min_freq";
-    if !sysfs::file_exists(path) { return false; }
+    if !sysfs::file_exists(path) { return Err(SysfsError::NotFound(path.to_string())); }
     sysfs::chmod(path, "644");
-    let ok = sysfs::write_sysfs(path, &freq_khz.to_string());
-    sysfs::chmod(path, "444"); ok
+    if sysfs::write_sysfs(path, &freq_khz.to_string()) { sysfs::chmod(path, "444"); Ok(true) }
+    else { Err(SysfsError::IoError(path.to_string())) }
 }
 
 /// Toggle SmartPack userspace DVFS lock.
@@ -360,12 +360,12 @@ pub fn set_cpufreq_hardlimit_min(freq_khz: i64) -> bool {
 /// **Sysfs path:** `/sys/kernel/cpufreq_hardlimit/userspace_dvfs_lock`
 /// **Root:** Required
 /// **Returns:** `true` if written successfully
-pub fn set_cpufreq_hardlimit_dvfs_lock(enabled: bool) -> bool {
+pub fn set_cpufreq_hardlimit_dvfs_lock(enabled: bool) -> SysfsResult<bool> {
     let path = "/sys/kernel/cpufreq_hardlimit/userspace_dvfs_lock";
-    if !sysfs::file_exists(path) { return false; }
+    if !sysfs::file_exists(path) { return Err(SysfsError::NotFound(path.to_string())); }
     sysfs::chmod(path, "644");
-    let ok = sysfs::write_sysfs(path, if enabled { "1" } else { "0" });
-    sysfs::chmod(path, "444"); ok
+    if sysfs::write_sysfs(path, if enabled { "1" } else { "0" }) { sysfs::chmod(path, "444"); Ok(true) }
+    else { Err(SysfsError::IoError(path.to_string())) }
 }
 
 /// Set MSM CPU frequency limit (SmartPack).
@@ -373,12 +373,12 @@ pub fn set_cpufreq_hardlimit_dvfs_lock(enabled: bool) -> bool {
 /// **Sysfs path:** `/sys/kernel/msm_cpufreq_limit/cpufreq_limit`
 /// **Root:** Required
 /// **Returns:** `true` if written successfully
-pub fn set_msm_cpufreq_limit(limit: i64) -> bool {
+pub fn set_msm_cpufreq_limit(limit: i64) -> SysfsResult<bool> {
     let path = "/sys/kernel/msm_cpufreq_limit/cpufreq_limit";
-    if !sysfs::file_exists(path) { return false; }
+    if !sysfs::file_exists(path) { return Err(SysfsError::NotFound(path.to_string())); }
     sysfs::chmod(path, "644");
-    let ok = sysfs::write_sysfs(path, &limit.to_string());
-    sysfs::chmod(path, "444"); ok
+    if sysfs::write_sysfs(path, &limit.to_string()) { sysfs::chmod(path, "444"); Ok(true) }
+    else { Err(SysfsError::IoError(path.to_string())) }
 }
 
 // ==================== CPU Boost (SmartPack + RvKernel) ====================
@@ -388,12 +388,12 @@ pub fn set_msm_cpufreq_limit(limit: i64) -> bool {
 /// **Sysfs path:** `/sys/devices/system/cpu/cpu_boost/input_boost_ms`
 /// **Root:** Required
 /// **Returns:** `true` if written successfully
-pub fn set_input_boost_ms(ms: i32) -> bool {
+pub fn set_input_boost_ms(ms: i32) -> SysfsResult<bool> {
     let path = "/sys/devices/system/cpu/cpu_boost/input_boost_ms";
-    if !sysfs::file_exists(path) { return false; }
+    if !sysfs::file_exists(path) { return Err(SysfsError::NotFound(path.to_string())); }
     sysfs::chmod(path, "644");
-    let ok = sysfs::write_sysfs(path, &ms.to_string());
-    sysfs::chmod(path, "444"); ok
+    if sysfs::write_sysfs(path, &ms.to_string()) { sysfs::chmod(path, "444"); Ok(true) }
+    else { Err(SysfsError::IoError(path.to_string())) }
 }
 
 /// Toggle scheduler boost on input event.
@@ -401,12 +401,12 @@ pub fn set_input_boost_ms(ms: i32) -> bool {
 /// **Sysfs path:** `/sys/devices/system/cpu/cpu_boost/sched_boost_on_input`
 /// **Root:** Required
 /// **Returns:** `true` if written successfully
-pub fn set_sched_boost_on_input(boost: bool) -> bool {
+pub fn set_sched_boost_on_input(boost: bool) -> SysfsResult<bool> {
     let path = "/sys/devices/system/cpu/cpu_boost/sched_boost_on_input";
-    if !sysfs::file_exists(path) { return false; }
+    if !sysfs::file_exists(path) { return Err(SysfsError::NotFound(path.to_string())); }
     sysfs::chmod(path, "644");
-    let ok = sysfs::write_sysfs(path, if boost { "1" } else { "0" });
-    sysfs::chmod(path, "444"); ok
+    if sysfs::write_sysfs(path, if boost { "1" } else { "0" }) { sysfs::chmod(path, "444"); Ok(true) }
+    else { Err(SysfsError::IoError(path.to_string())) }
 }
 
 // ==================== CPU EAS (AZenith) ====================
@@ -416,12 +416,12 @@ pub fn set_sched_boost_on_input(boost: bool) -> bool {
 /// **Sysfs path:** `/sys/devices/system/cpu/eas/enable`
 /// **Root:** Required
 /// **Returns:** `true` if written successfully
-pub fn set_cpu_eas_enabled(enabled: bool) -> bool {
+pub fn set_cpu_eas_enabled(enabled: bool) -> SysfsResult<bool> {
     let path = "/sys/devices/system/cpu/eas/enable";
-    if !sysfs::file_exists(path) { return false; }
+    if !sysfs::file_exists(path) { return Err(SysfsError::NotFound(path.to_string())); }
     sysfs::chmod(path, "644");
-    let ok = sysfs::write_sysfs(path, if enabled { "1" } else { "0" });
-    sysfs::chmod(path, "444"); ok
+    if sysfs::write_sysfs(path, if enabled { "1" } else { "0" }) { sysfs::chmod(path, "444"); Ok(true) }
+    else { Err(SysfsError::IoError(path.to_string())) }
 }
 
 // ==================== CPU DCVS Disable (Encore) ====================
@@ -431,12 +431,12 @@ pub fn set_cpu_eas_enabled(enabled: bool) -> bool {
 /// **Sysfs path:** `/sys/devices/system/cpu/cpu*/core_ctrl/cpudcvs_disable`
 /// **Root:** Required
 /// **Returns:** `true` if written successfully
-pub fn set_cpu_dcvs_disable(core: i32, disable: bool) -> bool {
+pub fn set_cpu_dcvs_disable(core: i32, disable: bool) -> SysfsResult<bool> {
     let path = format!("/sys/devices/system/cpu/cpu{}/core_ctrl/cpudcvs_disable", core);
-    if !sysfs::file_exists(&path) { return false; }
+    if !sysfs::file_exists(&path) { return Err(SysfsError::NotFound(path.clone())); }
     sysfs::chmod(&path, "644");
-    let ok = sysfs::write_sysfs(&path, if disable { "1" } else { "0" });
-    sysfs::chmod(&path, "444"); ok
+    if sysfs::write_sysfs(&path, if disable { "1" } else { "0" }) { sysfs::chmod(&path, "444"); Ok(true) }
+    else { Err(SysfsError::IoError(path)) }
 }
 
 // ==================== Devfreq Generic (QCOM CPU/MEM) ====================
@@ -468,8 +468,9 @@ pub fn get_devfreq_cur_freq(device: &str) -> i64 {
 /// **Sysfs path:** `/sys/class/devfreq/*/min_freq`
 /// **Root:** Required
 /// **Returns:** `true` if written successfully
-pub fn set_devfreq_min_freq(device: &str, freq: i64) -> bool {
-    sysfs::write_sysfs(&format!("/sys/class/devfreq/{}/min_freq", device), &freq.to_string())
+pub fn set_devfreq_min_freq(device: &str, freq: i64) -> SysfsResult<bool> {
+    let path = format!("/sys/class/devfreq/{}/min_freq", device);
+    if sysfs::write_sysfs(&path, &freq.to_string()) { Ok(true) } else { Err(SysfsError::IoError(path)) }
 }
 
 /// Set maximum devfreq frequency for a device.
@@ -477,8 +478,9 @@ pub fn set_devfreq_min_freq(device: &str, freq: i64) -> bool {
 /// **Sysfs path:** `/sys/class/devfreq/*/max_freq`
 /// **Root:** Required
 /// **Returns:** `true` if written successfully
-pub fn set_devfreq_max_freq(device: &str, freq: i64) -> bool {
-    sysfs::write_sysfs(&format!("/sys/class/devfreq/{}/max_freq", device), &freq.to_string())
+pub fn set_devfreq_max_freq(device: &str, freq: i64) -> SysfsResult<bool> {
+    let path = format!("/sys/class/devfreq/{}/max_freq", device);
+    if sysfs::write_sysfs(&path, &freq.to_string()) { Ok(true) } else { Err(SysfsError::IoError(path)) }
 }
 
 /// Get current devfreq governor for a device.
@@ -495,8 +497,9 @@ pub fn get_devfreq_governor(device: &str) -> String {
 /// **Sysfs path:** `/sys/class/devfreq/*/governor`
 /// **Root:** Required
 /// **Returns:** `true` if written successfully
-pub fn set_devfreq_governor(device: &str, gov: &str) -> bool {
-    sysfs::write_sysfs(&format!("/sys/class/devfreq/{}/governor", device), gov)
+pub fn set_devfreq_governor(device: &str, gov: &str) -> SysfsResult<bool> {
+    let path = format!("/sys/class/devfreq/{}/governor", device);
+    if sysfs::write_sysfs(&path, gov) { Ok(true) } else { Err(SysfsError::IoError(path)) }
 }
 
 // QCOM SM7150-specific devfreq devices
@@ -592,5 +595,103 @@ mod tests {
     #[test]
     fn test_core_online_cpu0_rejected() {
         assert!(!set_core_online(0, false));
+    }
+
+    #[test]
+    fn test_cpu_format_paths_max_core() {
+        let p = format!("/sys/devices/system/cpu/cpu{}", 15);
+        assert_eq!(p, "/sys/devices/system/cpu/cpu15");
+        let p = format!("/sys/devices/system/cpu/cpu{}/cpufreq/scaling_governor", 15);
+        assert!(p.contains("cpu15"));
+        assert!(p.ends_with("scaling_governor"));
+    }
+
+    #[test]
+    fn test_cpu_cluster_with_empty_cores() {
+        let c = CpuCluster {
+            cluster_number: 0, cores: vec![],
+            max_freq: 2400000, min_freq: 300000,
+            cur_min_freq: 300000, cur_max_freq: 2400000,
+            governor: String::new(),
+            available_governors: vec![],
+            policy_path: String::new(),
+            available_frequencies: vec![],
+        };
+        let json = serde_json::to_string(&c).unwrap();
+        let d: CpuCluster = serde_json::from_str(&json).unwrap();
+        assert!(d.cores.is_empty());
+        assert!(d.policy_path.is_empty());
+    }
+
+    #[test]
+    fn test_cpu_cluster_empty_string_values() {
+        let c = CpuCluster {
+            cluster_number: 0, cores: vec![0],
+            max_freq: 0, min_freq: 0,
+            cur_min_freq: 0, cur_max_freq: 0,
+            governor: "".into(),
+            available_governors: vec!["".into()],
+            policy_path: "".into(),
+            available_frequencies: vec![],
+        };
+        let json = serde_json::to_string(&c).unwrap();
+        assert!(json.contains("\"available_governors\""));
+    }
+
+    #[test]
+    fn test_cpu_cluster_zero_values() {
+        let c = CpuCluster {
+            cluster_number: 0, cores: vec![0],
+            max_freq: 0, min_freq: 0,
+            cur_min_freq: 0, cur_max_freq: 0,
+            governor: "".into(),
+            available_governors: vec![],
+            policy_path: "".into(),
+            available_frequencies: vec![],
+        };
+        let json = serde_json::to_string(&c).unwrap();
+        let d: CpuCluster = serde_json::from_str(&json).unwrap();
+        assert_eq!(d.max_freq, 0);
+        assert_eq!(d.min_freq, 0);
+    }
+
+    #[test]
+    fn test_core_info_empty_governor() {
+        let c = CoreInfo { core_number: 7, online: false, current_freq: 0, min_freq: 0, max_freq: 0, governor: "".into() };
+        let json = serde_json::to_string(&c).unwrap();
+        let d: CoreInfo = serde_json::from_str(&json).unwrap();
+        assert!(!d.online);
+        assert_eq!(d.current_freq, 0);
+    }
+
+    #[test]
+    fn test_cpu_load_info_edge_values() {
+        let l = CpuLoadInfo { total_load: 0.0, per_core_load: vec![] };
+        let json = serde_json::to_string(&l).unwrap();
+        let d: CpuLoadInfo = serde_json::from_str(&json).unwrap();
+        assert!((d.total_load - 0.0).abs() < f32::EPSILON);
+        assert!(d.per_core_load.is_empty());
+    }
+
+    #[test]
+    fn test_cpu_load_info_full_load() {
+        let l = CpuLoadInfo { total_load: 100.0, per_core_load: vec![100.0, 100.0, 100.0, 100.0] };
+        let json = serde_json::to_string(&l).unwrap();
+        let d: CpuLoadInfo = serde_json::from_str(&json).unwrap();
+        assert!((d.total_load - 100.0).abs() < f32::EPSILON);
+        assert_eq!(d.per_core_load.len(), 4);
+    }
+
+    #[test]
+    fn test_get_devfreq_freq_empty_device() {
+        let freqs = get_devfreq_available_frequencies("");
+        assert!(freqs.is_empty());
+    }
+
+    #[test]
+    fn test_get_qcom_devfreq_devices_non_android() {
+        let devices = get_qcom_devfreq_devices();
+        #[cfg(not(target_os = "android"))]
+        assert!(devices.is_empty());
     }
 }

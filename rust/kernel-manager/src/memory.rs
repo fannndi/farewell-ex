@@ -1,4 +1,4 @@
-use crate::sysfs;
+use crate::sysfs::{self, SysfsError, SysfsResult};
 use serde::{Deserialize, Serialize};
 
 /// System memory information from `/proc/meminfo`.
@@ -92,9 +92,10 @@ pub fn read_swappiness() -> i32 {
 /// **Sysfs path:** `/proc/sys/vm/swappiness`
 /// **Root:** Required
 /// **Returns:** `true` if written successfully
-pub fn set_swappiness(val: i32) -> bool {
-    sysfs::chmod("/proc/sys/vm/swappiness", "644");
-    sysfs::write_sysfs("/proc/sys/vm/swappiness", &val.to_string())
+pub fn set_swappiness(val: i32) -> SysfsResult<bool> {
+    let path = "/proc/sys/vm/swappiness";
+    sysfs::chmod(path, "644");
+    if sysfs::write_sysfs(path, &val.to_string()) { Ok(true) } else { Err(SysfsError::IoError(path.to_string())) }
 }
 
 /// Set dirty page ratio percentage.
@@ -102,9 +103,10 @@ pub fn set_swappiness(val: i32) -> bool {
 /// **Sysfs path:** `/proc/sys/vm/dirty_ratio`
 /// **Root:** Required
 /// **Returns:** `true` if written successfully
-pub fn set_dirty_ratio(val: i32) -> bool {
-    sysfs::chmod("/proc/sys/vm/dirty_ratio", "644");
-    sysfs::write_sysfs("/proc/sys/vm/dirty_ratio", &val.to_string())
+pub fn set_dirty_ratio(val: i32) -> SysfsResult<bool> {
+    let path = "/proc/sys/vm/dirty_ratio";
+    sysfs::chmod(path, "644");
+    if sysfs::write_sysfs(path, &val.to_string()) { Ok(true) } else { Err(SysfsError::IoError(path.to_string())) }
 }
 
 /// Set minimum free memory in kilobytes.
@@ -112,9 +114,10 @@ pub fn set_dirty_ratio(val: i32) -> bool {
 /// **Sysfs path:** `/proc/sys/vm/min_free_kbytes`
 /// **Root:** Required
 /// **Returns:** `true` if written successfully
-pub fn set_min_free_kbytes(val: i32) -> bool {
-    sysfs::chmod("/proc/sys/vm/min_free_kbytes", "644");
-    sysfs::write_sysfs("/proc/sys/vm/min_free_kbytes", &val.to_string())
+pub fn set_min_free_kbytes(val: i32) -> SysfsResult<bool> {
+    let path = "/proc/sys/vm/min_free_kbytes";
+    sysfs::chmod(path, "644");
+    if sysfs::write_sysfs(path, &val.to_string()) { Ok(true) } else { Err(SysfsError::IoError(path.to_string())) }
 }
 
 /// Get available ZRAM compression algorithms.
@@ -194,18 +197,16 @@ pub fn read_zram_device_stats(device: i32) -> Option<ZramStats> {
 /// ```
 /// memory::zram_set_algorithm(0, "lz4");
 /// ```
-pub fn zram_set_algorithm(device: i32, algo: &str) -> bool {
+pub fn zram_set_algorithm(device: i32, algo: &str) -> SysfsResult<bool> {
     let algo_path = format!("/sys/block/zram{}/comp_algorithm", device);
     let disksize_path = format!("/sys/block/zram{}/disksize", device);
-    if !sysfs::file_exists(&algo_path) { return false; }
-    // swapoff → set algo → swapon
-    let _ = sysfs::write_sysfs(&format!("/proc/swaps"), ""); // swapoff first
+    if !sysfs::file_exists(&algo_path) { return Err(SysfsError::NotFound(algo_path)); }
+    let _ = sysfs::write_sysfs(&format!("/proc/swaps"), "");
     sysfs::chmod(&disksize_path, "644");
-    sysfs::write_sysfs(&disksize_path, "0"); // reset
+    sysfs::write_sysfs(&disksize_path, "0");
     sysfs::chmod(&algo_path, "644");
-    let ok = sysfs::write_sysfs(&algo_path, algo);
-    sysfs::chmod(&algo_path, "444");
-    ok
+    if sysfs::write_sysfs(&algo_path, algo) { sysfs::chmod(&algo_path, "444"); Ok(true) }
+    else { Err(SysfsError::IoError(algo_path)) }
 }
 
 /// Set ZRAM device size in bytes (Xtra-Kernel lifecycle).
@@ -213,12 +214,12 @@ pub fn zram_set_algorithm(device: i32, algo: &str) -> bool {
 /// **Sysfs path:** `/sys/block/zram*/disksize`
 /// **Root:** Required
 /// **Returns:** `true` if size written successfully
-pub fn zram_set_size(device: i32, size_bytes: i64) -> bool {
+pub fn zram_set_size(device: i32, size_bytes: i64) -> SysfsResult<bool> {
     let disksize_path = format!("/sys/block/zram{}/disksize", device);
-    if !sysfs::file_exists(&disksize_path) { return false; }
+    if !sysfs::file_exists(&disksize_path) { return Err(SysfsError::NotFound(disksize_path.clone())); }
     sysfs::chmod(&disksize_path, "644");
-    let ok = sysfs::write_sysfs(&disksize_path, &size_bytes.to_string());
-    sysfs::chmod(&disksize_path, "444"); ok
+    if sysfs::write_sysfs(&disksize_path, &size_bytes.to_string()) { sysfs::chmod(&disksize_path, "444"); Ok(true) }
+    else { Err(SysfsError::IoError(disksize_path)) }
 }
 
 /// Create a swap file at the given path.
@@ -313,5 +314,119 @@ mod tests {
         let m = MemoryInfo { total_kb: 0, available_kb: 0, free_kb: 0, cached_kb: 0, buffers_kb: 0 };
         // total_kb == 0 should avoid division by zero in get_memory_pressure
         assert_eq!(m.total_kb, 0);
+    }
+
+    #[test]
+    fn test_memory_info_max_values() {
+        let m = MemoryInfo { total_kb: i64::MAX, available_kb: i64::MAX, free_kb: i64::MAX, cached_kb: i64::MAX, buffers_kb: i64::MAX };
+        let json = serde_json::to_string(&m).unwrap();
+        let d: MemoryInfo = serde_json::from_str(&json).unwrap();
+        assert_eq!(d.total_kb, i64::MAX);
+    }
+
+    #[test]
+    fn test_swap_info_zero_values() {
+        let s = SwapInfo { total_kb: 0, free_kb: 0, used_kb: 0 };
+        let json = serde_json::to_string(&s).unwrap();
+        let d: SwapInfo = serde_json::from_str(&json).unwrap();
+        assert_eq!(d.used_kb, 0);
+    }
+
+    #[test]
+    fn test_zram_stats_zero_compression_ratio() {
+        let z = ZramStats { disksize: 500000, orig_data_size: 0, compr_data_size: 0, mem_used_total: 0, compression_ratio: 1.0 };
+        // When compr_data_size is 0, compression_ratio defaults to 1.0
+        let json = serde_json::to_string(&z).unwrap();
+        let d: ZramStats = serde_json::from_str(&json).unwrap();
+        assert!((d.compression_ratio - 1.0).abs() < 0.01);
+        assert_eq!(d.disksize, 500000);
+    }
+
+    #[test]
+    fn test_zram_stats_negative_values() {
+        let z = ZramStats { disksize: -1, orig_data_size: -1, compr_data_size: -1, mem_used_total: -1, compression_ratio: -1.0 };
+        let json = serde_json::to_string(&z).unwrap();
+        let d: ZramStats = serde_json::from_str(&json).unwrap();
+        assert_eq!(d.disksize, -1);
+        assert!(d.compression_ratio < 0.0);
+    }
+
+    #[test]
+    fn test_zram_device_stats_nonexistent() {
+        let s = read_zram_device_stats(99);
+        assert!(s.is_none());
+    }
+
+    #[test]
+    fn test_get_available_zram_algorithms_nonexistent() {
+        let algos = get_available_zram_algorithms();
+        #[cfg(not(target_os = "android"))]
+        assert!(algos.is_empty());
+    }
+
+    #[test]
+    fn test_get_current_zram_algorithm_nonexistent() {
+        let algo = get_current_zram_algorithm();
+        #[cfg(not(target_os = "android"))]
+        assert_eq!(algo, "unknown");
+    }
+
+    #[test]
+    fn test_swap_file_create_empty_path() {
+        let r = swap_file_create("", 10);
+        assert!(!r);
+    }
+
+    #[test]
+    fn test_swap_file_remove_empty_path() {
+        let r = swap_file_remove("");
+        assert!(!r);
+    }
+
+    #[test]
+    fn test_zram_set_algorithm_nonexistent() {
+        assert!(!zram_set_algorithm(99, "lz4"));
+    }
+
+    #[test]
+    fn test_zram_set_size_nonexistent() {
+        assert!(!zram_set_size(99, 1048576));
+    }
+
+    #[test]
+    fn test_meminfo_json_empty() {
+        // read_meminfo_json reads actual /proc/meminfo, but the JSON should be valid
+        let json = read_meminfo_json();
+        assert!(json.starts_with("{") || json.starts_with("{\""));
+    }
+
+    #[test]
+    fn test_memory_pressure_calculation() {
+        // 50% pressure: total=1000, available=500
+        let m = MemoryInfo { total_kb: 1000, available_kb: 500, free_kb: 200, cached_kb: 200, buffers_kb: 100 };
+        let pct = if m.total_kb > 0 { ((m.total_kb - m.available_kb) as f32 / m.total_kb as f32) * 100.0 } else { 0.0 };
+        assert!((pct - 50.0).abs() < 0.01);
+    }
+
+    #[test]
+    fn test_read_swappiness_nonexistent() {
+        let v = read_swappiness();
+        #[cfg(not(target_os = "android"))]
+        assert_eq!(v, 60);
+    }
+
+    #[test]
+    fn test_set_swappiness_nonexistent() {
+        assert!(!set_swappiness(80));
+    }
+
+    #[test]
+    fn test_set_dirty_ratio_nonexistent() {
+        assert!(!set_dirty_ratio(30));
+    }
+
+    #[test]
+    fn test_set_min_free_kbytes_nonexistent() {
+        assert!(!set_min_free_kbytes(8192));
     }
 }

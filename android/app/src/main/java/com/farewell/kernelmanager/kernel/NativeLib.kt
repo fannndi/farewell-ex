@@ -244,6 +244,13 @@ object NativeLib {
     external fun setVectorFontOverride(pkg: String, scale: Float): Unit
     external fun clearVectorOverrides(): Unit
 
+    // Missing Features
+    external fun getPrintkNative(): String
+    external fun getWireguardVersionNative(): String
+    external fun getSchedAutogroupEnabledNative(): Int
+    external fun getOvercommitRatioNative(): Int
+    external fun getChargeControlLimitNative(): Int
+
     // Kotlin wrappers
     fun detectCpuClusters(): List<ClusterInfo>? {
         if (!isLoaded) return null

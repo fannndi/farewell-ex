@@ -1,4 +1,5 @@
 use std::process::Command;
+use crate::sysfs::{SysfsError, SysfsResult};
 
 // ==================== Global DPI/Font Control (DPIS patterns) ====================
 // Per-app DPI requires Xposed hooks — marked TODO
@@ -8,16 +9,18 @@ use std::process::Command;
 ///
 /// **Root:** Not required (ADB `wm density`)
 /// **Returns:** `true` if command succeeded
-pub fn set_global_density(dpi: i32) -> bool {
-    Command::new("wm").args(["density", &dpi.to_string()]).status().is_ok()
+pub fn set_global_density(dpi: i32) -> SysfsResult<bool> {
+    if Command::new("wm").args(["density", &dpi.to_string()]).status().is_ok() { Ok(true) }
+    else { Err(SysfsError::IoError("wm density failed".to_string())) }
 }
 
 /// Reset global display density to physical default.
 ///
 /// **Root:** Not required (ADB `wm density reset`)
 /// **Returns:** `true` if command succeeded
-pub fn reset_global_density() -> bool {
-    Command::new("wm").args(["density", "reset"]).status().is_ok()
+pub fn reset_global_density() -> SysfsResult<bool> {
+    if Command::new("wm").args(["density", "reset"]).status().is_ok() { Ok(true) }
+    else { Err(SysfsError::IoError("wm density reset failed".to_string())) }
 }
 
 /// Get current display density.
@@ -72,9 +75,9 @@ pub fn get_physical_density() -> i32 {
 ///
 /// **Root:** Not required (ADB `settings put`)
 /// **Returns:** `true` if command succeeded
-pub fn set_global_font_scale(scale: f32) -> bool {
-    let output = Command::new("settings").args(["put", "system", "font_scale", &format!("{:.1}", scale)]).status();
-    output.is_ok()
+pub fn set_global_font_scale(scale: f32) -> SysfsResult<bool> {
+    if Command::new("settings").args(["put", "system", "font_scale", &format!("{:.1}", scale)]).status().is_ok() { Ok(true) }
+    else { Err(SysfsError::IoError("settings put font_scale failed".to_string())) }
 }
 
 /// Get current font scale factor.
@@ -96,16 +99,18 @@ pub fn get_current_font_scale() -> f32 {
 ///
 /// **Root:** Not required (ADB `wm size`)
 /// **Returns:** `true` if command succeeded
-pub fn set_global_resolution(width: i32, height: i32) -> bool {
-    Command::new("wm").args(["size", &format!("{}x{}", width, height)]).status().is_ok()
+pub fn set_global_resolution(width: i32, height: i32) -> SysfsResult<bool> {
+    if Command::new("wm").args(["size", &format!("{}x{}", width, height)]).status().is_ok() { Ok(true) }
+    else { Err(SysfsError::IoError("wm size failed".to_string())) }
 }
 
 /// Reset global display resolution to default.
 ///
 /// **Root:** Not required (ADB `wm size reset`)
 /// **Returns:** `true` if command succeeded
-pub fn reset_global_resolution() -> bool {
-    Command::new("wm").args(["size", "reset"]).status().is_ok()
+pub fn reset_global_resolution() -> SysfsResult<bool> {
+    if Command::new("wm").args(["size", "reset"]).status().is_ok() { Ok(true) }
+    else { Err(SysfsError::IoError("wm size reset failed".to_string())) }
 }
 
 // ==================== Preset Densities ====================
@@ -114,14 +119,14 @@ pub fn reset_global_resolution() -> bool {
 ///
 /// **Root:** ADB
 /// **Returns:** `true` if preset applied
-pub fn apply_density_preset(preset: &str) -> bool {
+pub fn apply_density_preset(preset: &str) -> SysfsResult<bool> {
     match preset {
         "low" => set_global_density(240),
         "medium" => set_global_density(320),
         "high" => set_global_density(480),
         "xhigh" => set_global_density(640),
         "reset" => reset_global_density(),
-        _ => false,
+        _ => Err(SysfsError::IoError(format!("unknown density preset: {}", preset))),
     }
 }
 
@@ -129,13 +134,13 @@ pub fn apply_density_preset(preset: &str) -> bool {
 ///
 /// **Root:** ADB
 /// **Returns:** `true` if preset applied
-pub fn apply_font_preset(preset: &str) -> bool {
+pub fn apply_font_preset(preset: &str) -> SysfsResult<bool> {
     match preset {
         "small" => set_global_font_scale(0.85),
         "normal" => set_global_font_scale(1.0),
         "large" => set_global_font_scale(1.15),
         "xlarge" => set_global_font_scale(1.3),
-        _ => false,
+        _ => Err(SysfsError::IoError(format!("unknown font preset: {}", preset))),
     }
 }
 
@@ -188,5 +193,71 @@ mod tests {
         // On non-Android, returns 0
         #[cfg(not(target_os = "android"))]
         assert_eq!(d, 0);
+    }
+
+    #[test]
+    fn test_apply_density_preset_all() {
+        // Test that all valid presets return false on non-Android
+        for preset in &["low", "medium", "high", "xhigh", "reset"] {
+            assert_eq!(apply_density_preset(preset), false);
+        }
+    }
+
+    #[test]
+    fn test_apply_font_preset_all() {
+        for preset in &["small", "normal", "large", "xlarge"] {
+            assert_eq!(apply_font_preset(preset), false);
+        }
+    }
+
+    #[test]
+    fn test_set_global_resolution_zero() {
+        assert_eq!(set_global_resolution(0, 0), false);
+    }
+
+    #[test]
+    fn test_set_global_resolution_negative() {
+        assert_eq!(set_global_resolution(-1, -1), false);
+    }
+
+    #[test]
+    fn test_reset_global_density_no_adb() {
+        assert_eq!(reset_global_density(), false);
+    }
+
+    #[test]
+    fn test_reset_global_resolution_no_adb() {
+        assert_eq!(reset_global_resolution(), false);
+    }
+
+    #[test]
+    fn test_get_physical_density_no_dumpsys() {
+        let d = get_physical_density();
+        #[cfg(not(target_os = "android"))]
+        assert_eq!(d, 0);
+    }
+
+    #[test]
+    fn test_get_current_font_scale_no_settings() {
+        let s = get_current_font_scale();
+        #[cfg(not(target_os = "android"))]
+        assert!((s - 1.0).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn test_set_global_font_scale_large_value() {
+        assert_eq!(set_global_font_scale(2.0), false);
+    }
+
+    #[test]
+    fn test_set_global_font_scale_tiny_value() {
+        assert_eq!(set_global_font_scale(0.1), false);
+    }
+
+    #[test]
+    fn test_set_global_density_all_sizes() {
+        for dpi in &[120, 160, 240, 320, 400, 480, 560, 640, 720] {
+            assert_eq!(set_global_density(*dpi), false);
+        }
     }
 }

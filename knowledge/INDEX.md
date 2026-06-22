@@ -63,3 +63,4 @@ See `feature-catalog.md` — 15 categories, 200+ features, each with source, sys
 | 12 | Vector | Xposed detection + API | ~5 |
 | 13 | ZN-AuditPatch | Audit log patterns | ~3 |
 | 14 | LogFox | Crash logging + export | ~10 |
+| 15 | FPSViewer | FPS overlay + SurfaceFlinger latency | ~5 |

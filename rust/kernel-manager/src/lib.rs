@@ -913,3 +913,10 @@ pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_debounce
     let v: String = env.get_string(&value).map(|s| s.into()).unwrap_or_default();
     if daemon::debounce_write(&p, &v, 3) { 1 } else { 0 }
 }
+
+// ==================== COMPANION MODULE DETECTION ====================
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_hasFarewellCompanionNative(_env: JNIEnv, _class: JClass) -> jint {
+    if tier::has_farewell_companion() { 1 } else { 0 }
+}

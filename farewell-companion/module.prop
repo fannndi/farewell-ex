@@ -1,0 +1,6 @@
+id=farewell
+name=Farewell Kernel Manager Companion
+version=1.0.0
+versionCode=1
+author=farewell-ex
+description=Per-app renderer, device spoof, DPI/font override via ZygiskNext + LSPosed. Auto-detected by farewell-ex app.

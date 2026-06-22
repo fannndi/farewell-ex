@@ -367,3 +367,8 @@ pub fn get_locked_features(tier: &Tier) -> Vec<String> {
         .map(|f| f.name.clone())
         .collect()
 }
+
+// Companion module detection
+pub fn has_farewell_companion() -> bool {
+    sysfs::file_exists("/data/adb/modules/farewell/.active")
+}

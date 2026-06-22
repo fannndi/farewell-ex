@@ -1,0 +1,3 @@
+allow sysfs sysfs:file read write open
+allow sysfs proc:file read
+allow kernel kernel_system_state:file read

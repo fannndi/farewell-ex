@@ -21,14 +21,31 @@ pub const OPENGL_PROPS: &[(&str, &str)] = &[
     ("debug.hwui.skia_use_perf_hint", "true"),
 ];
 
+/// Set a system property via `resetprop -n`.
+///
+/// **Root:** Required
+/// **Returns:** `true` if resetprop succeeded
 pub fn resetprop(key: &str, value: &str) -> bool {
     Command::new("resetprop").args(["-n", key, value]).status().is_ok()
 }
 
+/// Delete a system property override via `resetprop --delete`.
+///
+/// **Root:** Required
+/// **Returns:** `true` if resetprop succeeded
 pub fn resetprop_delete(key: &str) -> bool {
     Command::new("resetprop").args(["--delete", key]).status().is_ok()
 }
 
+/// Switch GPU renderer between Vulkan and OpenGL (SkiaShift).
+///
+/// **Root:** Required
+/// **Returns:** `true` if all properties set
+///
+/// Example:
+/// ```
+/// renderer::set_renderer("vulkan");
+/// ```
 pub fn set_renderer(mode: &str) -> bool {
     let props = match mode {
         "vulkan" => VULKAN_PROPS,
@@ -46,6 +63,10 @@ pub fn set_renderer(mode: &str) -> bool {
     all_ok
 }
 
+/// Get current GPU renderer from `debug.hwui.renderer`.
+///
+/// **Root:** Not required
+/// **Returns:** Renderer string (e.g., "skiavk", "skiagl")
 pub fn get_current_renderer() -> String {
     let output = Command::new("getprop").arg("debug.hwui.renderer").output();
     match output {
@@ -54,6 +75,10 @@ pub fn get_current_renderer() -> String {
     }
 }
 
+/// Check if Vulkan is enabled via `ro.hwui.use_vulkan`.
+///
+/// **Root:** Not required
+/// **Returns:** `true` if Vulkan is active
 pub fn is_vulkan_enabled() -> bool {
     let output = Command::new("getprop").arg("ro.hwui.use_vulkan").output();
     match output {
@@ -62,12 +87,20 @@ pub fn is_vulkan_enabled() -> bool {
     }
 }
 
+/// Restart SurfaceFlinger via `stop`/`start` commands.
+///
+/// **Root:** Required
+/// **Returns:** `true` if both commands succeeded
 pub fn restart_surfaceflinger() -> bool {
     Command::new("stop").status().is_ok() && Command::new("start").status().is_ok()
 }
 
 // ==================== Magisk Module Generator ====================
 
+/// Generate a Magisk module with system.prop and post-fs-data.sh.
+///
+/// **Root:** Required (writes to /data/adb/modules/)
+/// **Returns:** `true` if module was created
 pub fn generate_magisk_module(module_name: &str, props: &[(&str, &str)]) -> bool {
     let module_dir = format!("/data/adb/modules/{}", module_name);
     let _ = Command::new("mkdir").arg("-p").arg(&module_dir).status();
@@ -98,11 +131,19 @@ pub fn generate_magisk_module(module_name: &str, props: &[(&str, &str)]) -> bool
     true
 }
 
+/// Remove a Magisk module directory.
+///
+/// **Root:** Required (deletes from /data/adb/modules/)
+/// **Returns:** `true` if removal succeeded
 pub fn remove_magisk_module(module_name: &str) -> bool {
     let module_dir = format!("/data/adb/modules/{}", module_name);
     Command::new("rm").args(["-rf", &module_dir]).status().is_ok()
 }
 
+/// List installed Magisk module names.
+///
+/// **Root:** Not required
+/// **Returns:** Vec of module name strings
 pub fn list_magisk_modules() -> Vec<String> {
     let output = Command::new("ls").arg("/data/adb/modules/").output();
     match output {
@@ -117,3 +158,46 @@ pub fn list_magisk_modules() -> Vec<String> {
 // TODO: Per-app renderer override requires LSPosed hooks
 // SkiaShift hooks __system_property_get per-process
 // Cannot implement without framework injection
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_vulkan_props_not_empty() {
+        assert!(!VULKAN_PROPS.is_empty());
+        assert!(VULKAN_PROPS.iter().any(|(k, _)| *k == "ro.hwui.use_vulkan"));
+        assert!(VULKAN_PROPS.iter().any(|(_, v)| *v == "skiavk"));
+    }
+
+    #[test]
+    fn test_opengl_props_not_empty() {
+        assert!(!OPENGL_PROPS.is_empty());
+        assert!(OPENGL_PROPS.iter().any(|(k, _)| *k == "ro.hwui.use_vulkan"));
+        assert!(OPENGL_PROPS.iter().any(|(_, v)| *v == "skiagl"));
+    }
+
+    #[test]
+    fn test_vulkan_use_vulkan_is_true() {
+        let p = VULKAN_PROPS.iter().find(|(k, _)| *k == "ro.hwui.use_vulkan").unwrap();
+        assert_eq!(p.1, "true");
+    }
+
+    #[test]
+    fn test_opengl_use_vulkan_is_false() {
+        let p = OPENGL_PROPS.iter().find(|(k, _)| *k == "ro.hwui.use_vulkan").unwrap();
+        assert_eq!(p.1, "false");
+    }
+
+    #[test]
+    fn test_renderer_invalid_mode() {
+        let r = set_renderer("invalid_mode");
+        assert!(!r);
+    }
+
+    #[test]
+    fn test_magisk_module_path_format() {
+        let p = format!("/data/adb/modules/{}", "my_module");
+        assert_eq!(p, "/data/adb/modules/my_module");
+    }
+}

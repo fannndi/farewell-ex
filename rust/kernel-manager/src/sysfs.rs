@@ -1,8 +1,38 @@
 use std::collections::HashMap;
 use std::ffi::CString;
+use std::fmt;
 use std::time::{Duration, Instant};
 use once_cell::sync::Lazy;
 use parking_lot::RwLock;
+
+/// Error type for sysfs operations with context.
+#[derive(Debug, Clone, PartialEq)]
+pub enum SysfsError {
+    /// File not found at given path
+    NotFound(String),
+    /// Permission denied (need chmod)
+    PermissionDenied(String),
+    /// Read/write operation failed
+    IoError(String),
+    /// Parse error (int/float conversion)
+    ParseError(String),
+}
+
+impl fmt::Display for SysfsError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            SysfsError::NotFound(p) => write!(f, "NotFound: {}", p),
+            SysfsError::PermissionDenied(p) => write!(f, "PermissionDenied: {}", p),
+            SysfsError::IoError(e) => write!(f, "IoError: {}", e),
+            SysfsError::ParseError(e) => write!(f, "ParseError: {}", e),
+        }
+    }
+}
+
+impl std::error::Error for SysfsError {}
+
+/// Result alias for sysfs operations.
+pub type SysfsResult<T> = Result<T, SysfsError>;
 
 struct CachedValue {
     value: String,
@@ -12,6 +42,16 @@ struct CachedValue {
 static VALUE_CACHE: Lazy<RwLock<HashMap<String, CachedValue>>> =
     Lazy::new(|| RwLock::new(HashMap::with_capacity(128)));
 
+/// Read file contents as trimmed string.
+///
+/// **Sysfs path:** Generic file path
+/// **Root:** Not required
+/// **Returns:** File contents as String, or None on error
+///
+/// Example:
+/// ```
+/// let contents = sysfs::read_file("/proc/version");
+/// ```
 #[inline]
 pub fn read_file(path: &str) -> Option<String> {
     #[cfg(unix)]
@@ -31,6 +71,11 @@ pub fn read_file(path: &str) -> Option<String> {
     }
 }
 
+/// Read file contents via libc open/read (fallback on non-rustix platforms).
+///
+/// **Sysfs path:** Generic file path
+/// **Root:** Not required
+/// **Returns:** File contents as String, or None on error
 #[inline]
 pub fn read_file_libc(path: &str) -> Option<String> {
     let c_path = CString::new(path).ok()?;
@@ -47,11 +92,26 @@ pub fn read_file_libc(path: &str) -> Option<String> {
     }
 }
 
+/// Read sysfs node, trying rustix then libc fallback.
+///
+/// **Sysfs path:** Generic sysfs path
+/// **Root:** Not required
+/// **Returns:** Sysfs node value as String, or None on error
 #[inline]
 pub fn read_sysfs(path: &str) -> Option<String> {
     read_file(path).or_else(|| read_file_libc(path))
 }
 
+/// Read sysfs node with TTL-based caching.
+///
+/// **Sysfs path:** Generic sysfs path
+/// **Root:** Not required
+/// **Returns:** Cached or fresh value, or None on error
+///
+/// Example:
+/// ```
+/// let val = sysfs::read_sysfs_cached("/sys/class/kgsl/kgsl-3d0/gpuclk", 500);
+/// ```
 #[inline]
 pub fn read_sysfs_cached(path: &str, ttl_ms: u64) -> Option<String> {
     if ttl_ms > 0 {
@@ -73,16 +133,31 @@ pub fn read_sysfs_cached(path: &str, ttl_ms: u64) -> Option<String> {
     Some(value)
 }
 
+/// Read sysfs node as `i64` with caching.
+///
+/// **Sysfs path:** Generic sysfs path
+/// **Root:** Not required
+/// **Returns:** Parsed integer, or None on error
 #[inline]
 pub fn read_sysfs_int(path: &str, ttl_ms: u64) -> Option<i64> {
     read_sysfs_cached(path, ttl_ms)?.parse().ok()
 }
 
+/// Read sysfs node as `f32` with caching.
+///
+/// **Sysfs path:** Generic sysfs path
+/// **Root:** Not required
+/// **Returns:** Parsed float, or None on error
 #[inline]
 pub fn read_sysfs_float(path: &str, ttl_ms: u64) -> Option<f32> {
     read_sysfs_cached(path, ttl_ms)?.parse().ok()
 }
 
+/// Read file contents into an existing buffer.
+///
+/// **Sysfs path:** Generic file path
+/// **Root:** Not required
+/// **Returns:** Number of bytes read, or None on error
 #[inline]
 pub fn read_file_buf(path: &str, buf: &mut [u8]) -> Option<usize> {
     let c_path = CString::new(path).ok()?;
@@ -95,6 +170,16 @@ pub fn read_file_buf(path: &str, buf: &mut [u8]) -> Option<usize> {
     }
 }
 
+/// Write value to a sysfs node.
+///
+/// **Sysfs path:** Generic sysfs path
+/// **Root:** Required
+/// **Returns:** `true` if write succeeded
+///
+/// Example:
+/// ```
+/// sysfs::write_sysfs("/sys/class/kgsl/kgsl-3d0/bus_split", "1");
+/// ```
 #[inline]
 pub fn write_sysfs(path: &str, value: &str) -> bool {
     let c_path = CString::new(path).ok()?;
@@ -110,6 +195,11 @@ pub fn write_sysfs(path: &str, value: &str) -> bool {
     ok
 }
 
+/// Change permissions on a sysfs node via `fchmod`.
+///
+/// **Sysfs path:** Generic sysfs path
+/// **Root:** Required
+/// **Returns:** `true` if chmod succeeded
 #[inline]
 pub fn chmod(path: &str, mode: &str) -> bool {
     let c_path = CString::new(path).ok()?;
@@ -124,6 +214,11 @@ pub fn chmod(path: &str, mode: &str) -> bool {
     }
 }
 
+/// Check if a file/sysfs node exists.
+///
+/// **Sysfs path:** Generic path
+/// **Root:** Not required
+/// **Returns:** `true` if the path exists and is accessible
 #[inline]
 pub fn file_exists(path: &str) -> bool {
     #[cfg(unix)]
@@ -139,6 +234,11 @@ pub fn file_exists(path: &str) -> bool {
     false
 }
 
+/// Read Android system property via `getprop`.
+///
+/// **Sysfs path:** N/A (Android property system)
+/// **Root:** Not required
+/// **Returns:** Property value, or None on non-Android
 #[inline]
 pub fn get_system_property(key: &str) -> Option<String> {
     #[cfg(target_os = "android")]
@@ -149,6 +249,68 @@ pub fn get_system_property(key: &str) -> Option<String> {
     { None }
 }
 
+/// Invalidate all cached sysfs values.
+///
+/// **Sysfs path:** N/A
+/// **Root:** Not required
+/// **Returns:** Nothing
 pub fn invalidate_cache() {
     VALUE_CACHE.write().clear();
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_read_sysfs_cached_nonexistent() {
+        let r = read_sysfs_cached("/farewell_test_nonexistent_42", 1000);
+        assert!(r.is_none());
+    }
+
+    #[test]
+    fn test_invalidate_cache_clears() {
+        invalidate_cache();
+        let r = read_sysfs_cached("/farewell_test_nonexistent_42", 1000);
+        assert!(r.is_none());
+    }
+
+    #[test]
+    fn test_read_sysfs_int_nonexistent() {
+        let r = read_sysfs_int("/farewell_test_nonexistent_42", 1000);
+        assert!(r.is_none());
+    }
+
+    #[test]
+    fn test_read_sysfs_float_nonexistent() {
+        let r = read_sysfs_float("/farewell_test_nonexistent_42", 1000);
+        assert!(r.is_none());
+    }
+
+    #[test]
+    fn test_write_sysfs_nonexistent() {
+        assert!(!write_sysfs("/farewell_test_nonexistent_42", "x"));
+    }
+
+    #[test]
+    fn test_file_exists_nonexistent() {
+        assert!(!file_exists("/farewell_test_nonexistent_42"));
+    }
+
+    #[test]
+    fn test_chmod_nonexistent() {
+        assert!(!chmod("/farewell_test_nonexistent_42", "644"));
+    }
+
+    #[test]
+    fn test_read_file_buf_nonexistent() {
+        let mut buf = [0u8; 16];
+        assert!(read_file_buf("/farewell_test_nonexistent_42", &mut buf).is_none());
+    }
+
+    #[test]
+    fn test_get_system_property_non_android() {
+        #[cfg(not(target_os = "android"))]
+        assert!(get_system_property("test.prop").is_none());
+    }
 }

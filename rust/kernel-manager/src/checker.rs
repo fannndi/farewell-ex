@@ -9,6 +9,7 @@ use std::path::Path;
 const LOG_DIR: &str = "/data/adb/farewell_logs";
 const LOG_FILE: &str = "/data/adb/farewell_logs/checker.log";
 
+/// Result of a single feature check with pass/fail status.
 pub struct CheckResult {
     pub feature: String,
     pub passed: bool,
@@ -31,6 +32,10 @@ fn now_ms() -> u64 {
 
 fn ensure_log_dir() { let _ = std::fs::create_dir_all(LOG_DIR); }
 
+/// Log a check result to file and logcat.
+///
+/// **Root:** Required (writes to /data/adb)
+/// **Returns:** Nothing
 pub fn log_check(result: &CheckResult) {
     ensure_log_dir();
     let status = if result.passed { "PASS" } else { "FAIL" };
@@ -42,10 +47,22 @@ pub fn log_check(result: &CheckResult) {
     let _ = Command::new("log").args(["-t", "FarewellKM", &format!("{}: {}", status, result.feature)]).status();
 }
 
+/// Read checker log file content.
+///
+/// **Root:** Not required
+/// **Returns:** Log file content, or empty on error
 pub fn get_log_content() -> String { std::fs::read_to_string(LOG_FILE).unwrap_or_default() }
 
+/// Get checker log entries as lines.
+///
+/// **Root:** Not required
+/// **Returns:** Vec of log line strings
 pub fn get_log_entries() -> Vec<String> { get_log_content().lines().map(|s| s.to_string()).collect() }
 
+/// Clear checker log file.
+///
+/// **Root:** Required (log file in /data/adb)
+/// **Returns:** `true` if log file removed
 pub fn clear_logs() -> bool { std::fs::remove_file(LOG_FILE).is_ok() }
 
 // ==================== Device Info ====================
@@ -71,6 +88,10 @@ fn collect_device_info() -> String {
 
 // ==================== Export (tar instead of zip) ====================
 
+/// Export all logs and device info as tar.gz archive.
+///
+/// **Root:** Required (reads from /data/adb)
+/// **Returns:** Path to export archive, or None
 pub fn export_logs() -> Option<String> {
     ensure_log_dir();
     let timestamp = now_ms();
@@ -108,6 +129,10 @@ pub struct CrashEntry {
     pub message: String,
 }
 
+/// Parse logcat text for Java crash, JNI crash, and ANR patterns.
+///
+/// **Root:** N/A
+/// **Returns:** Vec of `CrashEntry` parsed from logcat
 pub fn parse_crash_patterns(logcat: &str) -> Vec<CrashEntry> {
     let mut crashes = Vec::new();
     let lines: Vec<&str> = logcat.lines().collect();
@@ -170,6 +195,10 @@ fn extract_from_braackets(line: &str) -> String {
     "unknown".to_string()
 }
 
+/// Dump full logcat buffer.
+///
+/// **Root:** Not required
+/// **Returns:** Complete logcat output
 pub fn logcat_dump() -> String {
     Command::new("logcat").args(["-d", "-v", "time"]).output()
         .map(|o| String::from_utf8_lossy(&o.stdout).to_string())
@@ -178,6 +207,10 @@ pub fn logcat_dump() -> String {
 
 // ==================== Feature Verification ====================
 
+/// Verify a specific feature by checking its sysfs node or command.
+///
+/// **Root:** Depends on the feature
+/// **Returns:** `CheckResult` with pass/fail
 pub fn verify_feature(feature: &str) -> CheckResult {
     match feature {
         "read_cpu_info" => {
@@ -253,6 +286,10 @@ pub fn verify_feature(feature: &str) -> CheckResult {
     }
 }
 
+/// Verify all features unlocked at the given tier.
+///
+/// **Root:** Depends on features
+/// **Returns:** Vec of `CheckResult` for each unlocked feature
 pub fn verify_all_features(tier: &crate::tier::Tier) -> Vec<CheckResult> {
     let features = crate::tier::get_feature_matrix(tier);
     let mut results = Vec::new();
@@ -266,12 +303,133 @@ pub fn verify_all_features(tier: &crate::tier::Tier) -> Vec<CheckResult> {
     results
 }
 
+/// Calculate pass rate percentage from check results.
+///
+/// **Root:** N/A
+/// **Returns:** Pass rate 0.0–100.0
 pub fn get_pass_rate(results: &[CheckResult]) -> f64 {
     if results.is_empty() { return 100.0; }
     let passed = results.iter().filter(|r| r.passed).count();
     (passed as f64 / results.len() as f64) * 100.0
 }
 
+/// Get list of failed feature descriptions.
+///
+/// **Root:** N/A
+/// **Returns:** Vec of "feature: message" strings
 pub fn get_failed_features(results: &[CheckResult]) -> Vec<String> {
     results.iter().filter(|r| !r.passed).map(|r| format!("{}: {}", r.feature, r.message)).collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_check_result_pass() {
+        let r = CheckResult::pass("test_feature");
+        assert!(r.passed);
+        assert_eq!(r.feature, "test_feature");
+        assert_eq!(r.message, "OK");
+        assert!(r.timestamp > 0);
+    }
+
+    #[test]
+    fn test_check_result_fail() {
+        let r = CheckResult::fail("test_feature", "something went wrong");
+        assert!(!r.passed);
+        assert_eq!(r.message, "something went wrong");
+    }
+
+    #[test]
+    fn test_crash_entry_roundtrip() {
+        let c = CrashEntry { crash_type: "JAVA".into(), package: "com.example".into(), timestamp: 1234567890, message: "FATAL EXCEPTION".into() };
+        let json = serde_json::to_string(&c).unwrap();
+        let d: CrashEntry = serde_json::from_str(&json).unwrap();
+        assert_eq!(d.crash_type, "JAVA");
+        assert_eq!(d.package, "com.example");
+        assert_eq!(d.timestamp, 1234567890);
+    }
+
+    #[test]
+    fn test_crash_entry_empty() {
+        let c = CrashEntry { crash_type: String::new(), package: String::new(), timestamp: 0, message: String::new() };
+        let json = serde_json::to_string(&c).unwrap();
+        let d: CrashEntry = serde_json::from_str(&json).unwrap();
+        assert!(d.crash_type.is_empty());
+        assert_eq!(d.timestamp, 0);
+    }
+
+    #[test]
+    fn test_extract_package_normal() {
+        assert_eq!(extract_package("Process: com.example.app, PID: 12345"), "com.example.app");
+    }
+
+    #[test]
+    fn test_extract_package_no_comma() {
+        assert_eq!(extract_package("Process: com.example.app"), "com.example.app");
+    }
+
+    #[test]
+    fn test_extract_package_no_match() {
+        assert_eq!(extract_package("No process info"), "unknown");
+    }
+
+    #[test]
+    fn test_extract_from_braackets_normal() {
+        assert_eq!(extract_from_braackets("  >>> com.example.app <<<"), "com.example.app");
+    }
+
+    #[test]
+    fn test_extract_from_braackets_no_match() {
+        assert_eq!(extract_from_braackets("no brackets"), "unknown");
+    }
+
+    #[test]
+    fn test_parse_crash_patterns_empty() {
+        assert!(parse_crash_patterns("").is_empty());
+    }
+
+    #[test]
+    fn test_parse_crash_patterns_java() {
+        let logcat = "1234 5678 I AndroidRuntime: FATAL EXCEPTION: main\n     Process: com.example.crash, PID: 12345\n";
+        let crashes = parse_crash_patterns(logcat);
+        assert_eq!(crashes.len(), 1);
+        assert_eq!(crashes[0].crash_type, "JAVA");
+        assert_eq!(crashes[0].package, "com.example.crash");
+    }
+
+    #[test]
+    fn test_parse_crash_patterns_anr() {
+        let logcat = "1234 5678 I ActivityManager: ANR in com.example.anr\n";
+        let crashes = parse_crash_patterns(logcat);
+        assert_eq!(crashes.len(), 1);
+        assert_eq!(crashes[0].crash_type, "ANR");
+        assert_eq!(crashes[0].package, "com.example.anr");
+    }
+
+    #[test]
+    fn test_get_pass_rate_all_pass() {
+        let results = vec![CheckResult::pass("a"), CheckResult::pass("b"), CheckResult::pass("c")];
+        assert!((get_pass_rate(&results) - 100.0).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn test_get_pass_rate_half() {
+        let results = vec![CheckResult::pass("a"), CheckResult::fail("b", "err")];
+        assert!((get_pass_rate(&results) - 50.0).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn test_get_pass_rate_empty() {
+        assert!((get_pass_rate(&[]) - 100.0).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn test_get_failed_features() {
+        let results = vec![CheckResult::pass("a"), CheckResult::fail("b", "err")];
+        let failed = get_failed_features(&results);
+        assert_eq!(failed.len(), 1);
+        assert!(failed[0].starts_with("b:"));
+    }
 }

@@ -8,6 +8,7 @@ use crate::sysfs;
 //   Vector: modern Xposed framework (LSPlant-based)
 //   ZN-AuditPatch: audit log anti-detection
 
+/// Capability tier representing access level from NonRoot to Xposed.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Tier {
     NonRoot = 1,
@@ -40,6 +41,7 @@ impl Tier {
 
 // ==================== Framework Detection ====================
 
+/// Detected framework components and current tier level.
 pub struct FrameworkStatus {
     pub kernelsu: bool,
     pub kernelsu_version: String,
@@ -273,6 +275,7 @@ fn determine_tier(
 
 // ==================== Feature Unlock Check ====================
 
+/// A feature with its minimum required tier and unlock status.
 pub struct FeatureUnlock {
     pub name: String,
     pub min_tier: Tier,
@@ -280,6 +283,10 @@ pub struct FeatureUnlock {
     pub unlocked: bool,
 }
 
+/// Get the full feature-unlock matrix for a given tier.
+///
+/// **Root:** N/A
+/// **Returns:** Vec of `FeatureUnlock` for all defined features
 pub fn get_feature_matrix(tier: &Tier) -> Vec<FeatureUnlock> {
     let features = vec![
         // Tier 1: Non-ROOT
@@ -354,6 +361,10 @@ pub fn get_feature_matrix(tier: &Tier) -> Vec<FeatureUnlock> {
     }).collect()
 }
 
+/// Get all feature names that are unlocked at the given tier.
+///
+/// **Root:** N/A
+/// **Returns:** Vec of unlocked feature names
 pub fn get_unlocked_features(tier: &Tier) -> Vec<String> {
     get_feature_matrix(tier).iter()
         .filter(|f| f.unlocked)
@@ -361,6 +372,10 @@ pub fn get_unlocked_features(tier: &Tier) -> Vec<String> {
         .collect()
 }
 
+/// Get all feature names that are locked at the given tier.
+///
+/// **Root:** N/A
+/// **Returns:** Vec of locked feature names
 pub fn get_locked_features(tier: &Tier) -> Vec<String> {
     get_feature_matrix(tier).iter()
         .filter(|f| !f.unlocked)
@@ -369,6 +384,111 @@ pub fn get_locked_features(tier: &Tier) -> Vec<String> {
 }
 
 // Companion module detection
+/// Check if Farewell companion module is active.
+///
+/// **Root:** Not required
+/// **Returns:** `true` if companion module is present
 pub fn has_farewell_companion() -> bool {
     sysfs::file_exists("/data/adb/modules/farewell/.active")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_tier_ordering() {
+        assert!(Tier::NonRoot < Tier::Adb);
+        assert!(Tier::Adb < Tier::Root);
+        assert!(Tier::Root < Tier::Zygisk);
+        assert!(Tier::Zygisk < Tier::Xposed);
+    }
+
+    #[test]
+    fn test_tier_names() {
+        assert_eq!(Tier::NonRoot.name(), "Non-ROOT");
+        assert_eq!(Tier::Adb.name(), "ADB");
+        assert_eq!(Tier::Root.name(), "Full ROOT");
+        assert_eq!(Tier::Zygisk.name(), "ReZygisk/ZygiskNext");
+        assert_eq!(Tier::Xposed.name(), "Vector/Xposed");
+    }
+
+    #[test]
+    fn test_tier_descriptions() {
+        assert!(!Tier::NonRoot.description().is_empty());
+        assert!(!Tier::Adb.description().is_empty());
+        assert!(!Tier::Root.description().is_empty());
+        assert!(!Tier::Zygisk.description().is_empty());
+        assert!(!Tier::Xposed.description().is_empty());
+    }
+
+    #[test]
+    fn test_tier_numeric_values() {
+        assert_eq!(Tier::NonRoot as i32, 1);
+        assert_eq!(Tier::Adb as i32, 2);
+        assert_eq!(Tier::Root as i32, 3);
+        assert_eq!(Tier::Zygisk as i32, 4);
+        assert_eq!(Tier::Xposed as i32, 5);
+    }
+
+    #[test]
+    fn test_feature_matrix_nonroot_has_read() {
+        let features = get_feature_matrix(&Tier::NonRoot);
+        assert!(features.iter().any(|f| f.name == "read_cpu_info"));
+        assert!(features.iter().any(|f| f.name == "read_gpu_info"));
+    }
+
+    #[test]
+    fn test_feature_matrix_xposed_has_all() {
+        let features = get_feature_matrix(&Tier::Xposed);
+        assert!(features.iter().all(|f| f.unlocked));
+    }
+
+    #[test]
+    fn test_feature_matrix_nonroot_missing_write() {
+        let features = get_feature_matrix(&Tier::NonRoot);
+        assert!(features.iter().any(|f| f.name == "set_cpu_governor" && !f.unlocked));
+    }
+
+    #[test]
+    fn test_get_unlocked_features() {
+        let unlocked = get_unlocked_features(&Tier::Root);
+        assert!(unlocked.contains(&"set_cpu_governor".to_string()));
+        assert!(!unlocked.contains(&"set_dpi_per_app".to_string()));
+    }
+
+    #[test]
+    fn test_get_locked_features() {
+        let locked = get_locked_features(&Tier::NonRoot);
+        assert!(!locked.is_empty());
+        assert!(locked.iter().all(|f| f == "set_cpu_governor" || f == "read_cpu_info" || get_feature_matrix(&Tier::NonRoot).iter().any(|fm| fm.name == *f && !fm.unlocked)));
+    }
+
+    #[test]
+    fn test_framework_status_json_format() {
+        let status = FrameworkStatus {
+            kernelsu: false, kernelsu_version: String::new(),
+            magisk: false, magisk_version: String::new(),
+            zygisk_next: false, zygisk_next_version: String::new(),
+            vector: false, vector_version: String::new(),
+            zn_audit_patch: false, shizuku: false, resetprop: false,
+            current_tier: Tier::NonRoot,
+        };
+        let json = status.to_json();
+        assert!(json.contains("kernelsu"));
+        assert!(json.contains("magisk"));
+        assert!(json.contains("tier"));
+    }
+
+    #[test]
+    fn test_tier_enum_debug() {
+        assert_eq!(format!("{:?}", Tier::Root), "Root");
+    }
+
+    #[test]
+    fn test_tier_clone_copy() {
+        let t = Tier::Zygisk;
+        let t2 = t;
+        assert_eq!(t, t2);
+    }
 }

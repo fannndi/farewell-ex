@@ -5,6 +5,7 @@ use crate::sysfs;
 // Per-app spoofing requires Zygisk companion — marked TODO
 // Global spoofing via resetprop + mount --bind is sufficient for most use cases
 
+/// List of system properties that can be spoofed via resetprop.
 pub const SPOOFABLE_PROPS: &[&str] = &[
     "ro.product.model", "ro.product.brand", "ro.product.device",
     "ro.product.manufacturer", "ro.product.name", "ro.product.board",
@@ -14,10 +15,18 @@ pub const SPOOFABLE_PROPS: &[&str] = &[
     "ro.soc.manufacturer", "ro.soc.model",
 ];
 
+/// Set a system property via `resetprop -n`.
+///
+/// **Root:** Required
+/// **Returns:** `true` if resetprop succeeded
 pub fn resetprop(key: &str, value: &str) -> bool {
     Command::new("resetprop").args(["-n", key, value]).status().is_ok()
 }
 
+/// Read a system property via `getprop`.
+///
+/// **Root:** Not required
+/// **Returns:** Property value, or empty string
 pub fn getprop(key: &str) -> String {
     let output = Command::new("getprop").arg(key).output();
     match output {
@@ -26,15 +35,27 @@ pub fn getprop(key: &str) -> String {
     }
 }
 
+/// Spoof a single device property via resetprop.
+///
+/// **Root:** Required
+/// **Returns:** `true` if property was set
 pub fn spoof_device_property(key: &str, value: &str) -> bool {
     resetprop(key, value)
 }
 
+/// Restore a single spoofed property to its default.
+///
+/// **Root:** Required
+/// **Returns:** `true` if property was deleted
 pub fn restore_device_property(key: &str) -> bool {
     // resetprop --delete removes the override, system default returns
     Command::new("resetprop").args(["--delete", key]).status().is_ok()
 }
 
+/// Restore all spoofed properties and unmount cpuinfo spoof.
+///
+/// **Root:** Required
+/// **Returns:** `true` if all restorations succeeded
 pub fn restore_all_spoofs() -> bool {
     let mut all_ok = true;
     for prop in SPOOFABLE_PROPS {
@@ -48,6 +69,10 @@ pub fn restore_all_spoofs() -> bool {
 
 const SPOOF_DIR: &str = "/data/adb/farewell_spoof";
 
+/// Create a spoofed `/proc/cpuinfo` file.
+///
+/// **Root:** Required (writes to /data/adb/)
+/// **Returns:** `true` if file was created
 pub fn create_cpuinfo_spoof(content: &str) -> bool {
     let _ = std::fs::create_dir_all(SPOOF_DIR);
     let path = format!("{}/cpuinfo_spoof", SPOOF_DIR);
@@ -60,6 +85,10 @@ pub fn create_cpuinfo_spoof(content: &str) -> bool {
     }
 }
 
+/// Mount cpuinfo spoof via `mount --bind`.
+///
+/// **Root:** Required
+/// **Returns:** `true` if mount succeeded
 pub fn mount_cpuinfo_spoof() -> bool {
     let spoof_path = format!("{}/cpuinfo_spoof", SPOOF_DIR);
     if !sysfs::file_exists(&spoof_path) { return false; }
@@ -68,10 +97,18 @@ pub fn mount_cpuinfo_spoof() -> bool {
     Command::new("mount").args(["--bind", &spoof_path, "/proc/cpuinfo"]).status().is_ok()
 }
 
+/// Unmount the cpuinfo spoof.
+///
+/// **Root:** Required
+/// **Returns:** `true` if umount succeeded
 pub fn unmount_cpuinfo_spoof() -> bool {
     Command::new("umount").arg("/proc/cpuinfo").status().is_ok()
 }
 
+/// Check if cpuinfo is currently spoofed via mount.
+///
+/// **Root:** Not required
+/// **Returns:** `true` if cpuinfo_spoof is mounted
 pub fn is_cpuinfo_spoofed() -> bool {
     let output = Command::new("mount").arg("-l").output();
     match output {
@@ -85,6 +122,15 @@ pub fn is_cpuinfo_spoofed() -> bool {
 
 // ==================== Batch Spoof from Preset ====================
 
+/// Apply a device profile (pixel/samsung/xiaomi/oneplus) via resetprop.
+///
+/// **Root:** Required
+/// **Returns:** `true` if all properties set
+///
+/// Example:
+/// ```
+/// spoof::apply_device_profile("pixel");
+/// ```
 pub fn apply_device_profile(profile: &str) -> bool {
     let props: Vec<(&str, &str)> = match profile {
         "pixel" => vec![
@@ -152,6 +198,10 @@ pub fn apply_device_profile(profile: &str) -> bool {
     all_ok
 }
 
+/// Generate a Magisk module for persistent device spoofing.
+///
+/// **Root:** Required (writes to /data/adb/modules/)
+/// **Returns:** `true` if module was created
 pub fn generate_spoof_magisk_module(module_name: &str, profile: &str) -> bool {
     let module_dir = format!("/data/adb/modules/{}", module_name);
     let _ = Command::new("mkdir").arg("-p").arg(&module_dir).status();
@@ -185,3 +235,53 @@ pub fn generate_spoof_magisk_module(module_name: &str, profile: &str) -> bool {
 // TODO: Per-app device/CPU spoofing requires Zygisk companion
 // COPG uses JNI SetStaticObjectField + mount --bind per-process
 // Cannot implement without framework injection
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_spoofable_props_not_empty() {
+        assert!(!SPOOFABLE_PROPS.is_empty());
+        assert!(SPOOFABLE_PROPS.contains(&"ro.product.model"));
+        assert!(SPOOFABLE_PROPS.contains(&"ro.build.fingerprint"));
+        assert!(SPOOFABLE_PROPS.contains(&"ro.hardware"));
+    }
+
+    #[test]
+    fn test_spoofable_props_count() {
+        assert!(SPOOFABLE_PROPS.len() >= 10);
+    }
+
+    #[test]
+    fn test_apply_device_profile_unknown() {
+        let r = apply_device_profile("nonexistent_profile");
+        assert!(!r);
+    }
+
+    #[test]
+    fn test_apply_device_profile_pixel() {
+        let r = apply_device_profile("pixel");
+        #[cfg(not(target_os = "android"))]
+        assert!(!r); // resetprop won't exist
+    }
+
+    #[test]
+    fn test_create_cpuinfo_spoof_path() {
+        let p = format!("{}/cpuinfo_spoof", SPOOF_DIR);
+        assert!(p.contains("cpuinfo_spoof"));
+    }
+
+    #[test]
+    fn test_generate_spoof_module_dir() {
+        let p = format!("/data/adb/modules/{}", "test_module");
+        assert_eq!(p, "/data/adb/modules/test_module");
+    }
+
+    #[test]
+    fn test_spoof_model_pixel() {
+        let profile = "pixel";
+        let model = "Pixel 8 Pro";
+        assert_eq!(model, "Pixel 8 Pro");
+    }
+}

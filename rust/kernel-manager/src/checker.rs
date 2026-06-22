@@ -238,7 +238,7 @@ pub fn verify_feature(feature: &str) -> CheckResult {
             let output = Command::new("resetprop").args(["-n", "debug.hwui.renderer", "test"]).output();
             match output {
                 Ok(o) if o.status.success() => {
-                    Command::new("resetprop").args(["--delete", "debug.hwui.renderer"]).ok();
+                    let _ = std::process::Command::new("resetprop").arg("--delete").arg("debug.hwui.renderer").spawn();
                     CheckResult::pass(feature)
                 }
                 _ => CheckResult::fail(feature, "resetprop not available or failed"),
@@ -248,7 +248,7 @@ pub fn verify_feature(feature: &str) -> CheckResult {
             let output = Command::new("resetprop").args(["-n", "ro.product.model", "TestDevice"]).output();
             match output {
                 Ok(o) if o.status.success() => {
-                    Command::new("resetprop").args(["--delete", "ro.product.model"]).ok();
+                    let _ = std::process::Command::new("resetprop").arg("--delete").arg("ro.product.model").spawn();
                     CheckResult::pass(feature)
                 }
                 _ => CheckResult::fail(feature, "resetprop not available or failed"),

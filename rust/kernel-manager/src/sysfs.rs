@@ -182,11 +182,11 @@ pub fn read_file_buf(path: &str, buf: &mut [u8]) -> Option<usize> {
 /// ```
 #[inline]
 pub fn write_sysfs(path: &str, value: &str) -> bool {
-    let c_path = CString::new(path).ok()?;
+    let c_path = match CString::new(path) { Ok(c) => c, Err(_) => return false };
+    let c_value = match CString::new(value) { Ok(c) => c, Err(_) => return false };
     let ok = unsafe {
         let fd = libc::open(c_path.as_ptr(), libc::O_WRONLY | libc::O_TRUNC);
         if fd < 0 { return false; }
-        let c_value = CString::new(value).ok()?;
         let written = libc::write(fd, c_value.as_ptr() as *const libc::c_void, c_value.as_bytes().len());
         libc::close(fd);
         written > 0
@@ -202,13 +202,13 @@ pub fn write_sysfs(path: &str, value: &str) -> bool {
 /// **Returns:** `true` if chmod succeeded
 #[inline]
 pub fn chmod(path: &str, mode: &str) -> bool {
-    let c_path = CString::new(path).ok()?;
-    let c_mode = CString::new(mode).ok()?;
+    let c_path = match CString::new(path) { Ok(c) => c, Err(_) => return false };
+    let Ok(c_mode) = CString::new(mode) else { return false };
     unsafe {
         let fd = libc::open(c_path.as_ptr(), libc::O_RDONLY | libc::O_PATH);
         if fd < 0 { return false; }
         let mode_int = i32::from_str_radix(c_mode.to_str().unwrap_or("644"), 8).unwrap_or(0o644);
-        let result = libc::fchmod(fd, mode_int);
+        let result = libc::fchmod(fd, mode_int.try_into().unwrap());
         libc::close(fd);
         result == 0
     }

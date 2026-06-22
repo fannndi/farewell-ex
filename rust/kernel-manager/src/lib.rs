@@ -41,7 +41,7 @@ pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_detectCp
 }
 
 #[unsafe(no_mangle)]
-pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_readCoreDataNative(env: JNIEnv, _class: JClass) -> jstring {
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_readCoreDataNative(mut env: JNIEnv, _class: JClass) -> jstring {
     create_jstring_safe(&env, cpu::read_core_data())
 }
 
@@ -61,12 +61,12 @@ pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_readCore
 }
 
 #[unsafe(no_mangle)]
-pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_getCpuModelNative(env: JNIEnv, _class: JClass) -> jstring {
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_getCpuModelNative(mut env: JNIEnv, _class: JClass) -> jstring {
     create_jstring_safe(&env, cpu::get_cpu_model())
 }
 
 #[unsafe(no_mangle)]
-pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setGovernorNative(env: JNIEnv, _class: JClass, governor: JString) -> jint {
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setGovernorNative(mut env: JNIEnv, _class: JClass, governor: JString) -> jint {
     let gov: String = env.get_string(&governor).map(|s| s.into()).unwrap_or_default();
     match cpu::set_governor(&gov) { Ok(true) => 1, Err(e) => { eprintln!("setGovernor: {}", e); 0 }, _ => 0 }
 }
@@ -104,22 +104,22 @@ pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_getGpuVe
 }
 
 #[unsafe(no_mangle)]
-pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_getGpuModelNative(env: JNIEnv, _class: JClass) -> jstring {
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_getGpuModelNative(mut env: JNIEnv, _class: JClass) -> jstring {
     create_jstring_safe(&env, gpu::get_gpu_model())
 }
 
 #[unsafe(no_mangle)]
-pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_getGpuAvailableFrequenciesNative(env: JNIEnv, _class: JClass) -> jstring {
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_getGpuAvailableFrequenciesNative(mut env: JNIEnv, _class: JClass) -> jstring {
     create_jstring_safe(&env, serde_json::to_string(&gpu::get_gpu_available_frequencies()).unwrap_or_else(|_| "[]".to_string()))
 }
 
 #[unsafe(no_mangle)]
-pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_getGpuAvailablePoliciesNative(env: JNIEnv, _class: JClass) -> jstring {
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_getGpuAvailablePoliciesNative(mut env: JNIEnv, _class: JClass) -> jstring {
     create_jstring_safe(&env, serde_json::to_string(&gpu::get_gpu_available_policies()).unwrap_or_else(|_| "[]".to_string()))
 }
 
 #[unsafe(no_mangle)]
-pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_getGpuDriverInfoNative(env: JNIEnv, _class: JClass) -> jstring {
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_getGpuDriverInfoNative(mut env: JNIEnv, _class: JClass) -> jstring {
     create_jstring_safe(&env, gpu::get_gpu_driver_info())
 }
 
@@ -129,7 +129,7 @@ pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setGpuPo
 }
 
 #[unsafe(no_mangle)]
-pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setGpuForceNative(env: JNIEnv, _class: JClass, state: JString, value: jint) -> jint {
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setGpuForceNative(mut env: JNIEnv, _class: JClass, state: JString, value: jint) -> jint {
     let s: String = env.get_string(&state).map(|s| s.into()).unwrap_or_default();
     match gpu::set_gpu_force(&s, value != 0) { Ok(true) => 1, Err(e) => { eprintln!("setGpuForce: {}", e); 0 }, _ => 0 }
 }
@@ -172,7 +172,7 @@ pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_getZramA
 }
 
 #[unsafe(no_mangle)]
-pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_getAvailableZramAlgorithmsNative(env: JNIEnv, _class: JClass) -> jstring {
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_getAvailableZramAlgorithmsNative(mut env: JNIEnv, _class: JClass) -> jstring {
     create_jstring_safe(&env, serde_json::to_string(&memory::get_available_zram_algorithms()).unwrap_or_else(|_| "[]".to_string()))
 }
 
@@ -194,12 +194,12 @@ pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setMinFr
 // ==================== THERMAL ====================
 
 #[unsafe(no_mangle)]
-pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_readThermalZonesNative(env: JNIEnv, _class: JClass) -> jstring {
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_readThermalZonesNative(mut env: JNIEnv, _class: JClass) -> jstring {
     create_jstring_safe(&env, thermal::read_thermal_zones_json())
 }
 
 #[unsafe(no_mangle)]
-pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setThermalSconfigNative(env: JNIEnv, _class: JClass, preset: JString) -> jint {
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setThermalSconfigNative(mut env: JNIEnv, _class: JClass, preset: JString) -> jint {
     let p: String = env.get_string(&preset).map(|s| s.into()).unwrap_or_default();
     match thermal::set_thermal_sconfig(&p) { Ok(true) => 1, Err(e) => { eprintln!("setThermalSconfig: {}", e); 0 }, _ => 0 }
 }
@@ -237,7 +237,7 @@ pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_readCycl
 }
 
 #[unsafe(no_mangle)]
-pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_readBatteryHealthNative(env: JNIEnv, _class: JClass) -> jstring {
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_readBatteryHealthNative(mut env: JNIEnv, _class: JClass) -> jstring {
     create_jstring_safe(&env, power::read_battery_health())
 }
 
@@ -254,25 +254,25 @@ pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setBypas
 // ==================== SYSFS GENERIC ====================
 
 #[unsafe(no_mangle)]
-pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_getSystemPropertyNative(env: JNIEnv, _class: JClass, key: JString) -> jstring {
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_getSystemPropertyNative(mut env: JNIEnv, _class: JClass, key: JString) -> jstring {
     let k: String = env.get_string(&key).map(|s| s.into()).unwrap_or_default();
     create_jstring_safe(&env, sysfs::get_system_property(&k).unwrap_or_default())
 }
 
 #[unsafe(no_mangle)]
-pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_fileExistsNative(env: JNIEnv, _class: JClass, path: JString) -> jint {
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_fileExistsNative(mut env: JNIEnv, _class: JClass, path: JString) -> jint {
     let p: String = env.get_string(&path).map(|s| s.into()).unwrap_or_default();
     if sysfs::file_exists(&p) { 1 } else { 0 }
 }
 
 #[unsafe(no_mangle)]
-pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_readSysfsNative(env: JNIEnv, _class: JClass, path: JString) -> jstring {
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_readSysfsNative(mut env: JNIEnv, _class: JClass, path: JString) -> jstring {
     let p: String = env.get_string(&path).map(|s| s.into()).unwrap_or_default();
     create_jstring_safe(&env, sysfs::read_sysfs(&p).unwrap_or_default())
 }
 
 #[unsafe(no_mangle)]
-pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_writeSysfsNative(env: JNIEnv, _class: JClass, path: JString, value: JString) -> jint {
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_writeSysfsNative(mut env: JNIEnv, _class: JClass, path: JString, value: JString) -> jint {
     let p: String = env.get_string(&path).map(|s| s.into()).unwrap_or_default();
     let v: String = env.get_string(&value).map(|s| s.into()).unwrap_or_default();
     if sysfs::write_sysfs(&p, &v) { 1 } else { 0 }
@@ -301,7 +301,7 @@ pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setGpuMa
 }
 
 #[unsafe(no_mangle)]
-pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setGpuDevfreqGovernorNative(env: JNIEnv, _class: JClass, governor: JString) -> jint {
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setGpuDevfreqGovernorNative(mut env: JNIEnv, _class: JClass, governor: JString) -> jint {
     let g: String = env.get_string(&governor).map(|s| s.into()).unwrap_or_default();
     match gpu::set_gpu_devfreq_governor(&g) { Ok(true) => 1, Err(e) => { eprintln!("setGpuDevfreqGovernor: {}", e); 0 }, _ => 0 }
 }
@@ -347,7 +347,7 @@ pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_hasBusDc
 }
 
 #[unsafe(no_mangle)]
-pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setBusDcvsFreqNative(env: JNIEnv, _class: JClass, bus_name: JString, min: jint, max: jint) -> jint {
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setBusDcvsFreqNative(mut env: JNIEnv, _class: JClass, bus_name: JString, min: jint, max: jint) -> jint {
     let b: String = env.get_string(&bus_name).map(|s| s.into()).unwrap_or_default();
     match gpu::set_bus_dcvs_freq(&b, min, max) { Ok(true) => 1, Err(e) => { eprintln!("setBusDcvsFreq: {}", e); 0 }, _ => 0 }
 }
@@ -397,20 +397,20 @@ pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_dropCach
 // ==================== I/O ====================
 
 #[unsafe(no_mangle)]
-pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setIoSchedulerNative(env: JNIEnv, _class: JClass, device: JString, scheduler: JString) -> jint {
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setIoSchedulerNative(mut env: JNIEnv, _class: JClass, device: JString, scheduler: JString) -> jint {
     let d: String = env.get_string(&device).map(|s| s.into()).unwrap_or_default();
     let s: String = env.get_string(&scheduler).map(|s| s.into()).unwrap_or_default();
     match io::set_io_scheduler(&d, &s) { Ok(true) => 1, Err(e) => { eprintln!("setIoScheduler: {}", e); 0 }, _ => 0 }
 }
 
 #[unsafe(no_mangle)]
-pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setIoReadaheadNative(env: JNIEnv, _class: JClass, device: JString, kb: jint) -> jint {
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setIoReadaheadNative(mut env: JNIEnv, _class: JClass, device: JString, kb: jint) -> jint {
     let d: String = env.get_string(&device).map(|s| s.into()).unwrap_or_default();
     match io::set_io_readahead_kb(&d, kb) { Ok(true) => 1, Err(e) => { eprintln!("setIoReadahead: {}", e); 0 }, _ => 0 }
 }
 
 #[unsafe(no_mangle)]
-pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setIoNrRequestsNative(env: JNIEnv, _class: JClass, device: JString, nr: jint) -> jint {
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setIoNrRequestsNative(mut env: JNIEnv, _class: JClass, device: JString, nr: jint) -> jint {
     let d: String = env.get_string(&device).map(|s| s.into()).unwrap_or_default();
     match io::set_io_nr_requests(&d, nr) { Ok(true) => 1, Err(e) => { eprintln!("setIoNrRequests: {}", e); 0 }, _ => 0 }
 }
@@ -418,7 +418,7 @@ pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setIoNrR
 // ==================== NETWORK ====================
 
 #[unsafe(no_mangle)]
-pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setTcpCongestionNative(env: JNIEnv, _class: JClass, algo: JString) -> jint {
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setTcpCongestionNative(mut env: JNIEnv, _class: JClass, algo: JString) -> jint {
     let a: String = env.get_string(&algo).map(|s| s.into()).unwrap_or_default();
     match network::set_tcp_congestion(&a) { Ok(true) => 1, Err(e) => { eprintln!("setTcpCongestion: {}", e); 0 }, _ => 0 }
 }
@@ -470,14 +470,14 @@ pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setFpsgo
 // ==================== POWER ENHANCEMENTS ====================
 
 #[unsafe(no_mangle)]
-pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_discoverBypassChargingNodeNative(env: JNIEnv, _class: JClass) -> jstring {
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_discoverBypassChargingNodeNative(mut env: JNIEnv, _class: JClass) -> jstring {
     create_jstring_safe(&env, power::discover_bypass_charging_node().unwrap_or_default())
 }
 
 // ==================== MEMORY ENHANCEMENTS ====================
 
 #[unsafe(no_mangle)]
-pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_zramSetAlgorithmNative(env: JNIEnv, _class: JClass, device: jint, algo: JString) -> jint {
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_zramSetAlgorithmNative(mut env: JNIEnv, _class: JClass, device: jint, algo: JString) -> jint {
     let a: String = env.get_string(&algo).map(|s| s.into()).unwrap_or_default();
     match memory::zram_set_algorithm(device, &a) { Ok(true) => 1, Err(e) => { eprintln!("zramSetAlgorithm: {}", e); 0 }, _ => 0 }
 }
@@ -490,13 +490,13 @@ pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_zramSetS
 // ==================== RENDERER (SkiaShift resetprop) ====================
 
 #[unsafe(no_mangle)]
-pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setRendererNative(env: JNIEnv, _class: JClass, mode: JString) -> jint {
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setRendererNative(mut env: JNIEnv, _class: JClass, mode: JString) -> jint {
     let m: String = env.get_string(&mode).map(|s| s.into()).unwrap_or_default();
     match renderer::set_renderer(&m) { Ok(true) => 1, Err(e) => { eprintln!("setRenderer: {}", e); 0 }, _ => 0 }
 }
 
 #[unsafe(no_mangle)]
-pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_getCurrentRendererNative(env: JNIEnv, _class: JClass) -> jstring {
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_getCurrentRendererNative(mut env: JNIEnv, _class: JClass) -> jstring {
     create_jstring_safe(&env, renderer::get_current_renderer())
 }
 
@@ -513,14 +513,14 @@ pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_restartS
 // ==================== SPOOF (COPG resetprop + mount) ====================
 
 #[unsafe(no_mangle)]
-pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_spoofDevicePropertyNative(env: JNIEnv, _class: JClass, key: JString, value: JString) -> jint {
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_spoofDevicePropertyNative(mut env: JNIEnv, _class: JClass, key: JString, value: JString) -> jint {
     let k: String = env.get_string(&key).map(|s| s.into()).unwrap_or_default();
     let v: String = env.get_string(&value).map(|s| s.into()).unwrap_or_default();
     match spoof::spoof_device_property(&k, &v) { Ok(true) => 1, Err(e) => { eprintln!("spoofDeviceProperty: {}", e); 0 }, _ => 0 }
 }
 
 #[unsafe(no_mangle)]
-pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_restoreDevicePropertyNative(env: JNIEnv, _class: JClass, key: JString) -> jint {
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_restoreDevicePropertyNative(mut env: JNIEnv, _class: JClass, key: JString) -> jint {
     let k: String = env.get_string(&key).map(|s| s.into()).unwrap_or_default();
     match spoof::restore_device_property(&k) { Ok(true) => 1, Err(e) => { eprintln!("restoreDeviceProperty: {}", e); 0 }, _ => 0 }
 }
@@ -546,7 +546,7 @@ pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_isCpuinf
 }
 
 #[unsafe(no_mangle)]
-pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_applyDeviceProfileNative(env: JNIEnv, _class: JClass, profile: JString) -> jint {
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_applyDeviceProfileNative(mut env: JNIEnv, _class: JClass, profile: JString) -> jint {
     let p: String = env.get_string(&profile).map(|s| s.into()).unwrap_or_default();
     match spoof::apply_device_profile(&p) { Ok(true) => 1, Err(e) => { eprintln!("applyDeviceProfile: {}", e); 0 }, _ => 0 }
 }
@@ -579,13 +579,13 @@ pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_getCurre
 }
 
 #[unsafe(no_mangle)]
-pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_applyDensityPresetNative(env: JNIEnv, _class: JClass, preset: JString) -> jint {
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_applyDensityPresetNative(mut env: JNIEnv, _class: JClass, preset: JString) -> jint {
     let p: String = env.get_string(&preset).map(|s| s.into()).unwrap_or_default();
     match display_control::apply_density_preset(&p) { Ok(true) => 1, Err(e) => { eprintln!("applyDensityPreset: {}", e); 0 }, _ => 0 }
 }
 
 #[unsafe(no_mangle)]
-pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_applyFontPresetNative(env: JNIEnv, _class: JClass, preset: JString) -> jint {
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_applyFontPresetNative(mut env: JNIEnv, _class: JClass, preset: JString) -> jint {
     let p: String = env.get_string(&preset).map(|s| s.into()).unwrap_or_default();
     match display_control::apply_font_preset(&p) { Ok(true) => 1, Err(e) => { eprintln!("applyFontPreset: {}", e); 0 }, _ => 0 }
 }
@@ -593,7 +593,7 @@ pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_applyFon
 // ==================== DAEMON (Foreground Monitor + Per-App) ====================
 
 #[unsafe(no_mangle)]
-pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_getForegroundAppNative(env: JNIEnv, _class: JClass) -> jstring {
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_getForegroundAppNative(mut env: JNIEnv, _class: JClass) -> jstring {
     create_jstring_safe(&env, daemon::get_foreground_app())
 }
 
@@ -610,7 +610,7 @@ pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_stopProf
 }
 
 #[unsafe(no_mangle)]
-pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_saveProfilesNative(env: JNIEnv, _class: JClass, json: JString) -> jint {
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_saveProfilesNative(mut env: JNIEnv, _class: JClass, json: JString) -> jint {
     let j: String = env.get_string(&json).map(|s| s.into()).unwrap_or_default();
     if daemon::save_profiles_to_file("/data/local/tmp/farewell_profiles.json", &j) { 1 } else { 0 }
 }
@@ -648,7 +648,7 @@ pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_hasReset
 }
 
 #[unsafe(no_mangle)]
-pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_getFrameworkStatusNative(env: JNIEnv, _class: JClass) -> jstring {
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_getFrameworkStatusNative(mut env: JNIEnv, _class: JClass) -> jstring {
     create_jstring_safe(&env, daemon::get_framework_status())
 }
 
@@ -660,7 +660,7 @@ pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setDndEn
 }
 
 #[unsafe(no_mangle)]
-pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setImmersiveModeNative(env: JNIEnv, _class: JClass, pkg: JString, enabled: jint) -> jint {
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setImmersiveModeNative(mut env: JNIEnv, _class: JClass, pkg: JString, enabled: jint) -> jint {
     let p: String = env.get_string(&pkg).map(|s| s.into()).unwrap_or_default();
     match daemon::set_immersive_mode(&p, enabled != 0) { Ok(true) => 1, Err(e) => { eprintln!("setImmersiveMode: {}", e); 0 }, _ => 0 }
 }
@@ -683,7 +683,7 @@ pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setScree
 // ==================== Apply-on-Boot ====================
 
 #[unsafe(no_mangle)]
-pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_saveBootConfigNative(env: JNIEnv, _class: JClass, config: JString) -> jint {
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_saveBootConfigNative(mut env: JNIEnv, _class: JClass, config: JString) -> jint {
     let c: String = env.get_string(&config).map(|s| s.into()).unwrap_or_default();
     match daemon::save_boot_config(&c) { Ok(true) => 1, Err(e) => { eprintln!("saveBootConfig: {}", e); 0 }, _ => 0 }
 }
@@ -707,19 +707,19 @@ pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_detectTi
 }
 
 #[unsafe(no_mangle)]
-pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_getFrameworkStatusJsonNative(env: JNIEnv, _class: JClass) -> jstring {
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_getFrameworkStatusJsonNative(mut env: JNIEnv, _class: JClass) -> jstring {
     let status = tier::FrameworkStatus::detect();
     create_jstring_safe(&env, status.to_json())
 }
 
 #[unsafe(no_mangle)]
-pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_getUnlockedFeaturesNative(env: JNIEnv, _class: JClass) -> jint {
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_getUnlockedFeaturesNative(mut env: JNIEnv, _class: JClass) -> jint {
     let status = tier::FrameworkStatus::detect();
     tier::get_unlocked_features(&status.current_tier).len() as jint
 }
 
 #[unsafe(no_mangle)]
-pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_getLockedFeaturesNative(env: JNIEnv, _class: JClass) -> jint {
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_getLockedFeaturesNative(mut env: JNIEnv, _class: JClass) -> jint {
     let status = tier::FrameworkStatus::detect();
     tier::get_locked_features(&status.current_tier).len() as jint
 }
@@ -727,7 +727,7 @@ pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_getLocke
 // ==================== FEATURE CHECKER ====================
 
 #[unsafe(no_mangle)]
-pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_verifyFeatureNative(env: JNIEnv, _class: JClass, feature: JString) -> jstring {
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_verifyFeatureNative(mut env: JNIEnv, _class: JClass, feature: JString) -> jstring {
     let f: String = env.get_string(&feature).map(|s| s.into()).unwrap_or_default();
     let result = checker::verify_feature(&f);
     checker::log_check(&result);
@@ -800,25 +800,25 @@ pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_fstrimAl
 // ==================== CPU DEVFREQ ====================
 
 #[unsafe(no_mangle)]
-pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_getDevfreqCurFreqNative(_env: JNIEnv, _class: JClass, device: JString) -> jlong {
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_getDevfreqCurFreqNative(mut _env: JNIEnv, _class: JClass, device: JString) -> jlong {
     let d: String = _env.get_string(&device).map(|s| s.into()).unwrap_or_default();
     cpu::get_devfreq_cur_freq(&d)
 }
 
 #[unsafe(no_mangle)]
-pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setDevfreqMinFreqNative(_env: JNIEnv, _class: JClass, device: JString, freq: jlong) -> jint {
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setDevfreqMinFreqNative(mut _env: JNIEnv, _class: JClass, device: JString, freq: jlong) -> jint {
     let d: String = _env.get_string(&device).map(|s| s.into()).unwrap_or_default();
     match cpu::set_devfreq_min_freq(&d, freq) { Ok(true) => 1, Err(e) => { eprintln!("setDevfreqMinFreq: {}", e); 0 }, _ => 0 }
 }
 
 #[unsafe(no_mangle)]
-pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setDevfreqMaxFreqNative(_env: JNIEnv, _class: JClass, device: JString, freq: jlong) -> jint {
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setDevfreqMaxFreqNative(mut _env: JNIEnv, _class: JClass, device: JString, freq: jlong) -> jint {
     let d: String = _env.get_string(&device).map(|s| s.into()).unwrap_or_default();
     match cpu::set_devfreq_max_freq(&d, freq) { Ok(true) => 1, Err(e) => { eprintln!("setDevfreqMaxFreq: {}", e); 0 }, _ => 0 }
 }
 
 #[unsafe(no_mangle)]
-pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setDevfreqGovernorNative(env: JNIEnv, _class: JClass, device: JString, gov: JString) -> jint {
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setDevfreqGovernorNative(mut env: JNIEnv, _class: JClass, device: JString, gov: JString) -> jint {
     let d: String = env.get_string(&device).map(|s| s.into()).unwrap_or_default();
     let g: String = env.get_string(&gov).map(|s| s.into()).unwrap_or_default();
     match cpu::set_devfreq_governor(&d, &g) { Ok(true) => 1, Err(e) => { eprintln!("setDevfreqGovernor: {}", e); 0 }, _ => 0 }
@@ -839,12 +839,12 @@ pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setAdren
 // ==================== DISPLAY MODES ====================
 
 #[unsafe(no_mangle)]
-pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_getDisplayModesNative(env: JNIEnv, _class: JClass) -> jstring {
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_getDisplayModesNative(mut env: JNIEnv, _class: JClass) -> jstring {
     create_jstring_safe(&env, serde_json::to_string(&gpu::get_display_modes()).unwrap_or_default())
 }
 
 #[unsafe(no_mangle)]
-pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setDisplayModeNative(env: JNIEnv, _class: JClass, mode: JString) -> jint {
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setDisplayModeNative(mut env: JNIEnv, _class: JClass, mode: JString) -> jint {
     let m: String = env.get_string(&mode).map(|s| s.into()).unwrap_or_default();
     match gpu::set_display_mode(&m) { Ok(true) => 1, Err(e) => { eprintln!("setDisplayMode: {}", e); 0 }, _ => 0 }
 }
@@ -874,11 +874,11 @@ pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setUsbCu
 // ==================== MISSING FEATURES ====================
 
 #[unsafe(no_mangle)]
-pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_getPrintkNative(env: JNIEnv, _class: JClass) -> jstring {
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_getPrintkNative(mut env: JNIEnv, _class: JClass) -> jstring {
     create_jstring_safe(&env, network::get_printk())
 }
 #[unsafe(no_mangle)]
-pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_getWireguardVersionNative(env: JNIEnv, _class: JClass) -> jstring {
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_getWireguardVersionNative(mut env: JNIEnv, _class: JClass) -> jstring {
     create_jstring_safe(&env, network::get_wireguard_version())
 }
 #[unsafe(no_mangle)]
@@ -897,13 +897,13 @@ pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_getCharg
 // ==================== CPUSET ====================
 
 #[unsafe(no_mangle)]
-pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_getCpusetCpusNative(env: JNIEnv, _class: JClass, group: JString) -> jstring {
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_getCpusetCpusNative(mut env: JNIEnv, _class: JClass, group: JString) -> jstring {
     let g: String = env.get_string(&group).map(|s| s.into()).unwrap_or_default();
     create_jstring_safe(&env, scheduler::get_cpuset_cpus(&g))
 }
 
 #[unsafe(no_mangle)]
-pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setCpusetCpusNative(env: JNIEnv, _class: JClass, group: JString, cpus: JString) -> jint {
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setCpusetCpusNative(mut env: JNIEnv, _class: JClass, group: JString, cpus: JString) -> jint {
     let g: String = env.get_string(&group).map(|s| s.into()).unwrap_or_default();
     let c: String = env.get_string(&cpus).map(|s| s.into()).unwrap_or_default();
     match scheduler::set_cpuset_cpus(&g, &c) { Ok(true) => 1, Err(e) => { eprintln!("setCpusetCpus: {}", e); 0 }, _ => 0 }
@@ -912,26 +912,26 @@ pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setCpuse
 // ==================== DISK STATS ====================
 
 #[unsafe(no_mangle)]
-pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_readDiskStatsNative(env: JNIEnv, _class: JClass) -> jstring {
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_readDiskStatsNative(mut env: JNIEnv, _class: JClass) -> jstring {
     create_jstring_safe(&env, disk::read_diskstats_json())
 }
 
 // ==================== QCOM DEVFREQ DEVICES ====================
 
 #[unsafe(no_mangle)]
-pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_getQcomDevfreqDevicesNative(env: JNIEnv, _class: JClass) -> jstring {
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_getQcomDevfreqDevicesNative(mut env: JNIEnv, _class: JClass) -> jstring {
     create_jstring_safe(&env, serde_json::to_string(&cpu::get_qcom_devfreq_devices()).unwrap_or_default())
 }
 
 // ==================== CPUSET GROUPS ====================
 
 #[unsafe(no_mangle)]
-pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_getAvailableCpusetGroupsNative(env: JNIEnv, _class: JClass) -> jstring {
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_getAvailableCpusetGroupsNative(mut env: JNIEnv, _class: JClass) -> jstring {
     create_jstring_safe(&env, serde_json::to_string(&scheduler::get_available_cpuset_groups()).unwrap_or_default())
 }
 
 #[unsafe(no_mangle)]
-pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_debounceWriteNative(env: JNIEnv, _class: JClass, path: JString, value: JString) -> jint {
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_debounceWriteNative(mut env: JNIEnv, _class: JClass, path: JString, value: JString) -> jint {
     let p: String = env.get_string(&path).map(|s| s.into()).unwrap_or_default();
     let v: String = env.get_string(&value).map(|s| s.into()).unwrap_or_default();
     if daemon::debounce_write(&p, &v, 3) { 1 } else { 0 }

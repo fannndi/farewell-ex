@@ -87,10 +87,10 @@ pub fn detect_cpu_clusters() -> Vec<CpuCluster> {
 
             let cur_min = sysfs::read_sysfs_int(
                 &format!("/sys/devices/system/cpu/cpu{}/cpufreq/scaling_min_freq", first), 1000
-            ).unwrap_or(min) as i32;
+            ).unwrap_or(min.into()) as i32;
             let cur_max = sysfs::read_sysfs_int(
                 &format!("/sys/devices/system/cpu/cpu{}/cpufreq/scaling_max_freq", first), 1000
-            ).unwrap_or(max) as i32;
+            ).unwrap_or(max.into()) as i32;
 
             CpuCluster {
                 cluster_number: idx as i32,

@@ -233,6 +233,17 @@ object NativeLib {
     // Disk Stats
     external fun readDiskStatsNative(): String
 
+    // ZygiskNext Companion
+    external fun setZygiskPropertyOverrides(props: Array<String>): Unit
+    external fun setZygiskRendererOverride(pkg: String, renderer: String): Unit
+    external fun setZygiskCpuinfoSpoof(spoofPath: String): Unit
+    external fun startZygiskHook(): Unit
+
+    // Vector/Xposed
+    external fun setVectorDpiOverride(pkg: String, dpi: Int): Unit
+    external fun setVectorFontOverride(pkg: String, scale: Float): Unit
+    external fun clearVectorOverrides(): Unit
+
     // Kotlin wrappers
     fun detectCpuClusters(): List<ClusterInfo>? {
         if (!isLoaded) return null

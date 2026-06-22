@@ -1,0 +1,6 @@
+id=farewell-vector
+name=Farewell Vector Xposed Module
+version=1.0.0
+versionCode=1
+author=farewell-ex
+description=Per-app DPI override, font scaling, and DisplayMetrics rewrite for Farewell Kernel Manager. Requires Vector or LSPosed.

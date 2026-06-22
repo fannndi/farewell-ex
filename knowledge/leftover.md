@@ -1,143 +1,145 @@
-# Leftover Features — Membutuhkan System-Level Binary/Framework
+# Leftover Features — Implementation Path (v2.0)
 
-Fitur-fitur berikut **tidak bisa diimplementasikan hanya dengan KernelSU root**.
-Ditandai sebagai leftover untuk future implementation via custom binary yang ditanam di OS.
-
----
-
-## 1. Per-App GPU Renderer (SkiaShift Perfect Mode)
-
-**Status:** Global toggle implemented via `renderer.rs` (resetprop)
-**Leftover:** Per-app perfect override (no flicker)
-
-**Masalah:**
-- Properties (`ro.hwui.use_vulkan`, `debug.hwui.renderer`) adalah process-wide shared memory
-- Tidak bisa return value berbeda per-process tanpa hooking
-- `wm density` + foreground detect punya 200-500ms flicker
-
-**Solusi yang dibutuhkan:**
-1. **ReZygisk** — Zygisk implementation untuk KernelSU, enable native injection
-2. **Custom kernel module** — Patch kernel untuk per-process property mapping
-3. **LSPosed** — Hook `__system_property_get` per-process
-
-**File referensi:** `renderer.rs:117` (TODO marker)
+> **Status:** 5/6 features now have code — need ZygiskNext/Vector build + install to activate.
+> **Deploy:** KernelSU modules di `zygisk/` dan `vector/`.
 
 ---
 
-## 2. Per-Process COW Property Spoof (COPG Advanced)
+## Tier System Rekap
 
-**Status:** Global device spoof implemented via `spoof.rs` (resetprop + mount --bind)
-**Leftover:** Per-process COW (Copy-On-Write) property spoof
-
-**Masalah:**
-- COPG menggunakan `mmap(MAP_PRIVATE | MAP_FIXED)` pada `/dev/__properties__` pages
-- Ini membuat copy private per-process, jadi perubahan tidak visible ke process lain
-- Butuh Zygisk companion untuk inject mmap sebelum app specialization
-
-**Solusi yang dibutuhkan:**
-1. **ReZygisk companion** — Inject mmap per-process sebelum zygote fork
-2. **Custom init binary** — Modify property service untuk per-process mapping
-
-**File referensi:** `spoof.rs:184` (TODO marker)
+| Tier | Framework | Fungsi | Referensi |
+|------|-----------|--------|-----------|
+| 3 | KernelSU-Next | Root akses, sysfs write, resetprop, mount | `modules/23-kernelsu-next.md` |
+| 4 | ZygiskNext | Zygote hook, per-app mount namespace, mmap | `modules/21-zygisknext.md` |
+| 5 | Vector | ART hook via LSPlant, Xposed API | `modules/22-vector.md` |
 
 ---
 
-## 3. Per-Process Android ID Forge (COPG Advanced)
+## 1. Per-App GPU Renderer — SkiaShift Perfect
 
-**Status:** Global device spoof implemented
-**Leftover:** Per-process Android ID spoof
+**Status:** 🔧 Implementasi pending — butuh Vector module
 
-**Masalah:**
-- Android ID stored di `Settings.Secure` database, bukan system property
-- COPG forge `Settings$Secure.sNameValueCache` di ART heap per-process
-- Butuh JNI injection ke target process untuk modify cache
+**Yang sudah:** Global renderer switch (`renderer.rs` — resetprop)
+**Yang kurang:** Per-app override via `__system_property_get` hook
 
-**Solusi yang dibutuhkan:**
-1. **Zygisk JNI injection** — Inject ke zygote child sebelum app loads
-2. **ptrace injection** — Attach ke target process, modify memory (fragile)
+**Implementation path:**
+1. Buat Vector (Xposed) module yang hook `__system_property_get` di native
+2. Hook 6 functions: `__system_property_get`, `__system_property_read_callback`, `__system_property_wait`, `__system_property_foreach`, `__system_property_find`, `__system_property_read`
+3. Return value berbeda per-process berdasarkan foreground app
+4. Deploy sebagai KernelSU module (`/data/adb/modules/farewell-renderer/`)
 
-**File referensi:** `spoof.rs:184` (TODO marker)
+**Referensi:** `modules/22-vector.md` (LSPlant ART hook), `renderer.rs` (VULKAN_PROPS, OPENGL_PROPS)
+**Tier unlock:** 5 (Vector)
 
 ---
 
-## 4. Per-App DPI Without Flicker (DPIS Perfect Mode)
+## 2. Per-Process COW Property Spoof — COPG Complete
 
-**Status:** Global DPI implemented via `display_control.rs` (wm density)
-**Leftover:** Per-app DPI without 200-500ms flicker
+**Status:** 🔧 Implementasi pending — butuh ZygiskNext companion
 
-**Masalah:**
-- `wm density` triggers Configuration change → Activity recreation (visible flicker)
-- DPIS hooks `Display.getMetrics()`, `ResourcesImpl.updateConfiguration()` per-process
-- Intercept `Configuration.fontScale` at `launch-activity-item` lifecycle point
-- Tidak ada shell command equivalent untuk per-app DisplayMetrics override
+**Yang sudah:** Global device spoof (`spoof.rs` — resetprop 16 props + mount --bind cpuinfo)
+**Yang kurang:** Per-process `mmap(MAP_PRIVATE|MAP_FIXED)` pada `/dev/__properties__`
 
-**Solusi yang dibutuhkan:**
-1. **LSPosed** — Hook Display.getMetrics() per-process
-2. **ReZygisk + LSPosed** — Install LSPosed via ReZygisk on KernelSU
-3. **Custom WindowManager service** — Modify Android framework for per-app config
+**Implementation path:**
+1. Buat ZygiskNext companion process yang handle mmap injection
+2. Di `postAppSpecialize` (sebelum app start), inject mmap untuk override properties
+3. Copy-on-write: perubahan hanya visible ke process target
+4. Deploy via KernelSU module
 
-**File referensi:** `display_control.rs:102` (TODO marker)
+**Referensi:** `modules/21-zygisknext.md` (Module API v1, companion IPC)
+**Tier unlock:** 4 (ZygiskNext)
+
+---
+
+## 3. Per-Process Android ID Forge
+
+**Status:** 🔧 Implementasi pending — butuh ZygiskNext
+
+**Yang sudah:** —
+**Yang kurang:** Forge `Settings$Secure.sNameValueCache` di ART heap
+
+**Implementation path:**
+1. ZygiskNext companion → inject ke target process via ptrace/Zygote hook
+2. Modify `Settings$Secure.AndroidId` in-memory
+3. Atau hook `ContentResolver.query` untuk return forged value
+
+**Referensi:** COPG (ART heap modification), `modules/21-zygisknext.md`
+**Tier unlock:** 4 (ZygiskNext)
+
+---
+
+## 4. Per-App DPI Tanpa Flicker — DPIS Complete
+
+**Status:** 🔧 Implementasi pending — butuh Vector module
+
+**Yang sudah:** Global DPI (`display_control.rs` — `wm density`)
+**Yang kurang:** Per-app DPI via `Display.getMetrics()` hook
+
+**Implementation path:**
+1. Buat Vector module yang hook `Display.getMetrics()`, `Display.getSize()`, `ResourcesImpl.updateConfiguration()`
+2. Intercept `Configuration.fontScale` di `launch-activity-item` lifecycle
+3. Return nilai DPI berbeda per-app berdasarkan package name
+4. Zero flicker karena hook terjadi sebelum UI render
+
+**Referensi:** `modules/22-vector.md` (ART hook), DPIS original (Xposed hooks)
+**Tier unlock:** 5 (Vector)
 
 ---
 
 ## 5. Per-App Mount Namespace Isolation
 
-**Status:** Global CPU spoof implemented via mount --bind
-**Leftover:** Per-app /proc/cpuinfo spoof (different content per app)
+**Status:** 🔧 Implementasi pending — butuh ZygiskNext companion
 
-**Masalah:**
-- `mount --bind` affects all processes globally
-- Per-app mount butuh `unshare(CLONE_NEWNS)` sebelum app specialization
-- Zygote fork tidak inherit mount namespace dari shell
-
-**Solusi yang dibutuhkan:**
-1. **Zygisk companion** — `unshare(CLONE_NEWNS)` + mount --bind sebelum app start
-2. **Custom zygote patch** — Modify zygote to support per-app mount namespaces
-3. **Kernel namespace patch** — Custom kernel untuk per-app mount namespace
-
-**File referensi:** `spoof.rs:184` (TODO marker)
-
----
-
-## 6. Shizuku UserService (AIDL) — Replace Deprecated newProcess
-
-**Status:** Shizuku shell exec implemented via `newProcess` (deprecated)
-**Leftover:** UserService AIDL for proper service binding
-
-**Masalah:**
-- `Shizuku.newProcess()` deprecated, akan dihapus di API 14
-- UserService butuh AIDL interface + ServiceConnection
-- Lebih complex tapi lebih reliable
-
-**Solusi yang dibutuhkan:**
-1. Define AIDL interface `IShellService.aidl`
-2. Implement `ShellService` di app
-3. `Shizuku.bindUserService()` untuk start service as root/ADB
-4. Route semua shell commands via UserService instead of newProcess
-
-**File referensi:** `ShizukuManager.kt:39` (newProcess usage)
-
----
-
-## Custom Binary Plan (Future)
-
-Untuk implement leftover features tanpa framework external:
-
-```
-/system/bin/farewell-daemon
-├── early-init: mount namespace setup
-├── post-fs-data: property spoof + boot config
-├── zygote-hook: per-process injection (custom)
-├── foreground-monitor: per-app profile switching
-└── property-override: per-process COW property
-```
+**Yang sudah:** Global `/proc/cpuinfo` spoof via `mount --bind`
+**Yang kurang:** Per-app mount namespace via `unshare(CLONE_NEWNS)`
 
 **Implementation path:**
-1. Write daemon binary in Rust (cross-compile for Android)
-2. Install as KernelSU module (`/data/adb/modules/farewell/`)
-3. `post-fs-data.sh` starts daemon
-4. Daemon hooks zygote via custom mechanism
-5. Per-app features work without LSPosed/Zygisk
+1. ZygiskNext companion → hook Zygote fork
+2. Sebelum app specialization, panggil `unshare(CLONE_NEWNS)`
+3. Lalu `mount --bind {custom} /proc/cpuinfo` di namespace baru
+4. Setiap app punya view `/proc/cpuinfo` sendiri
 
-**Estimated complexity:** High — butuh custom zygote hooking mechanism
-**Alternative:** Install ReZygisk → all leftover features unlocked
+**Referensi:** `modules/21-zygisknext.md` (Module API v1, companion)
+**Tier unlock:** 4 (ZygiskNext)
+
+---
+
+## 6. Shizuku UserService AIDL
+
+**Status:** 🔧 Implementasi pending — upgrade dari deprecated API
+
+**Yang sudah:** Shizuku shell exec via `Shizuku.newProcess()` (deprecated di API 14)
+**Yang kurang:** UserService AIDL untuk proper service binding
+
+**Implementation path:**
+1. Define `IShellService.aidl` dengan method `exec(command)` → `String`
+2. Implement `ShellService` di app process
+3. `Shizuku.bindUserService()` untuk start service sebagai root/shell
+4. Route semua shell commands via UserService, bukan `newProcess()`
+
+**File:** `ShizukuManager.kt`
+**Tier unlock:** 2 (ADB/Shizuku)
+
+---
+
+## Implementation Priority
+
+```
+Priority 1 — Vector module per-app renderer
+  ├── Build Vector module (.apk)
+  ├── Hook __system_property_get (6 functions)
+  ├── Deploy via KernelSU module system
+  └── (Sumber: modules/22-vector.md, renderer.rs)
+
+Priority 2 — ZygiskNext companion COW spoof
+  ├── Build ZygiskNext module (.zip)
+  ├── mmap injection pada /dev/__properties__
+  ├── Companion IPC untuk komunikasi dengan app
+  └── (Sumber: modules/21-zygisknext.md, spoof.rs)
+
+Priority 3 — Vector module per-app DPI
+  ├── Hook Display.getMetrics() + ResourcesImpl
+  ├── Package-based config lookup
+  ├── Zero flicker config switch
+  └── (Sumber: modules/22-vector.md, display_control.rs)
+```

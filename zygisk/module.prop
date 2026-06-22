@@ -1,0 +1,6 @@
+id=farewell-zygisk
+name=Farewell ZygiskNext Companion
+version=1.0.0
+versionCode=1
+author=farewell-ex
+description=Per-app renderer spoofing, device property override, and CPU info mount namespace for Farewell Kernel Manager. Requires ZygiskNext.

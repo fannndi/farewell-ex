@@ -36,7 +36,7 @@ object ShizukuManager {
 
     suspend fun executeCommand(command: String): Result<String> = withContext(Dispatchers.IO) {
         try {
-            val process = rikka.shizuku.Shizuku.newProcess(arrayOf("sh", "-c", command), null, null)
+            val process = Runtime.getRuntime().exec(arrayOf("sh", "-c", command))
             val output = process.inputStream.bufferedReader().readText().trim()
             val error = process.errorStream.bufferedReader().readText().trim()
             val exitCode = process.waitFor()

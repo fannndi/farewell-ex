@@ -8,7 +8,6 @@ import android.content.Intent
 import android.graphics.Color
 import android.graphics.PixelFormat
 import android.os.IBinder
-import android.os.Process
 import android.view.WindowManager
 import android.widget.TextView
 import kotlin.concurrent.thread
@@ -68,20 +67,19 @@ class FpsOverlayService : Service() {
     }
 
     private fun getSystemFps(): Int {
-        var proc: Process? = null
         try {
-            proc = Runtime.getRuntime().exec(arrayOf("dumpsys", "SurfaceFlinger", "--latency"))
+            val proc = Runtime.getRuntime().exec(arrayOf("dumpsys", "SurfaceFlinger", "--latency"))
             val ts = proc.inputStream.bufferedReader().useLines { lines ->
                 lines.drop(1).take(128)
                     .mapNotNull { it.split("\t").firstOrNull()?.toLongOrNull() }
                     .toList()
             }
-            if (ts.size > 1) {
+            proc.destroy()
+            return if (ts.size > 1) {
                 val total = ts.last() - ts.first()
                 if (total > 0) (ts.size * 1000000000L / total).toInt() else 0
             } else 0
-        } catch (_: Exception) { 0 }
-        finally { proc?.destroy() }
+        } catch (_: Exception) { return 0 }
     }
 
     private fun buildNotification(): Notification {

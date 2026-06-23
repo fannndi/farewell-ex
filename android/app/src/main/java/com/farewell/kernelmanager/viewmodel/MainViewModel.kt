@@ -1,7 +1,9 @@
 package com.farewell.kernelmanager.viewmodel
 
+import android.os.Build
 import android.util.Log
 import com.farewell.kernelmanager.kernel.AccessManager
+import com.farewell.kernelmanager.kernel.AccessMode
 import com.farewell.kernelmanager.kernel.NativeLib
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -63,7 +65,7 @@ class MainViewModel : PollingViewModel<DashboardState>(DashboardState(), interva
                         gpuVendor = gpuVendor, gpuModel = gpuModel, batteryLevel = batteryLevel,
                         batteryTemp = batteryTemp, batteryVoltage = batteryVoltage, batteryCurrent = batteryCurrent,
                         isCharging = isCharging, ramUsedMb = memInfo.second, ramTotalMb = memInfo.first,
-                        deviceModel = android.os.Build.MODEL, soc = soc, androidVersion = android,
+                        deviceModel = Build.MODEL, soc = soc, androidVersion = android,
                     )
                 }
             } catch (e: Exception) { Log.e("MainViewModel", "refresh failed", e) }

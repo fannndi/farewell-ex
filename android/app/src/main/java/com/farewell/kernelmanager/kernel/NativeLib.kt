@@ -213,7 +213,7 @@ object NativeLib {
 
     // Adrenoboost
     external fun getAdrenoboostNative(): Int
-    external fun setAdrenoboostNative(val: Int): Int
+    external fun setAdrenoboostNative(value: Int): Int
 
     // Display Modes
     external fun getDisplayModesNative(): String

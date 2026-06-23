@@ -321,6 +321,61 @@ pub fn get_failed_features(results: &[CheckResult]) -> Vec<String> {
     results.iter().filter(|r| !r.passed).map(|r| format!("{}: {}", r.feature, r.message)).collect()
 }
 
+const DEBUG_LOG: &str = "/sdcard/root.log";
+
+fn logfox_timestamp() -> String {
+    let ms = now_ms();
+    let secs = ms / 1000;
+    let millis = ms % 1000;
+    let hours = (secs / 3600) % 24;
+    let mins = (secs / 60) % 60;
+    let sec = secs % 60;
+    format!("{:02}:{:02}:{:02}.{:03}", hours, mins, sec, millis)
+}
+
+/// Run full tier diagnostic — tests ALL features at given tier, returns
+/// LogFox-style log and writes to /sdcard/root.log.
+///
+/// tier_name: "ksu", "zygisk", or "lsposed"
+pub fn run_debug_diagnostic(tier_name: &str) -> String {
+    let tier = match tier_name {
+        "ksu" => crate::tier::Tier::Root,
+        "zygisk" => crate::tier::Tier::Zygisk,
+        "lsposed" => crate::tier::Tier::Xposed,
+        _ => { return format!("[{}] [E] [Diag] Unknown tier: {}", logfox_timestamp(), tier_name); }
+    };
+
+    let mut log = String::new();
+    let ts = logfox_timestamp();
+    log.push_str(&format!("{} [I] [Diag] === Diagnostic: {} ===\n", ts, tier_name.to_uppercase()));
+    log.push_str(&format!("{} [I] [Diag] Tier level: {}\n", logfox_timestamp(), tier as i32));
+
+    let results = verify_all_features(&tier);
+    for r in &results {
+        let level = if r.passed { "PASS" } else { "FAIL" };
+        log.push_str(&format!("{} [{}] [{}] {}\n", logfox_timestamp(), if r.passed { "I" } else { "E" }, level, r.feature));
+        if !r.passed {
+            log.push_str(&format!("{} [E] [Diag]   └─ {}\n", logfox_timestamp(), r.message));
+        }
+    }
+
+    let passed = results.iter().filter(|r| r.passed).count();
+    let total = results.len();
+    let rate = if total > 0 { (passed as f64 / total as f64) * 100.0 } else { 0.0 };
+    log.push_str(&format!("{} [I] [Diag] === Summary: {}/{} PASS ({:.0}%) ===\n", logfox_timestamp(), passed, total, rate));
+
+    if let Ok(mut f) = OpenOptions::new().create(true).write(true).truncate(true).open(DEBUG_LOG) {
+        let _ = f.write_all(log.as_bytes());
+    }
+
+    log
+}
+
+/// Read the debug diagnostic log.
+pub fn read_debug_log() -> String {
+    std::fs::read_to_string(DEBUG_LOG).unwrap_or_default()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

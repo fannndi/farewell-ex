@@ -9,19 +9,33 @@ enum class AccessMode { NON_ROOT, SHIZUKU, ROOT }
 object AccessManager {
     private const val TAG = "AccessManager"
     var currentMode: AccessMode = AccessMode.NON_ROOT
-        private set
-    private var rootAvailable = false
-    private var shizukuAvailable = false
+    var rootAvailable = false
+    var shizukuAvailable = false
+    private var detectCount = 0
 
     suspend fun detectAccessMode(): AccessMode {
+        detectCount++
         rootAvailable = RootManager.isRootAvailable()
-        shizukuAvailable = ShizukuManager.isShizukuAvailable() && ShizukuManager.checkPermission() == android.content.pm.PackageManager.PERMISSION_GRANTED
+        val shizukuRunning = ShizukuManager.isShizukuAvailable()
+        val shizukuGranted = ShizukuManager.checkPermission() == android.content.pm.PackageManager.PERMISSION_GRANTED
+        if (shizukuRunning && !shizukuGranted) {
+            ShizukuManager.requestPermission(1001)
+        }
+        shizukuAvailable = shizukuRunning && shizukuGranted
+        if (!rootAvailable) {
+            try {
+                val tier = NativeLib.detectTierNative()
+                rootAvailable = tier >= 3
+            } catch (_: Exception) { }
+        }
         currentMode = when {
             rootAvailable -> AccessMode.ROOT
             shizukuAvailable -> AccessMode.SHIZUKU
             else -> AccessMode.NON_ROOT
         }
-        Log.d(TAG, "Access mode: $currentMode (root=$rootAvailable, shizuku=$shizukuAvailable)")
+        if (detectCount <= 3 || rootAvailable) {
+            Log.d(TAG, "Access mode: $currentMode (root=$rootAvailable, shizuku=$shizukuAvailable, detect#$detectCount)")
+        }
         return currentMode
     }
 

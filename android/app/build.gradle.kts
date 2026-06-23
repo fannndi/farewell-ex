@@ -7,11 +7,12 @@ plugins {
 
 android {
     namespace = "com.farewell.kernelmanager"
-    compileSdk = 35
+    compileSdk = 36
+    ndkVersion = "28.2.13676358"
     defaultConfig {
         applicationId = "com.farewell.kernelmanager"
-        minSdk = 26
-        targetSdk = 35
+        minSdk = 29
+        targetSdk = 36
         versionCode = 1
         versionName = "1.0.0"
     }

@@ -5,3 +5,8 @@ training/log.md
 *.so
 *.apk
 *.zip
+rust/kernel-manager/target/
+android/.gradle/
+android/build/
+android/app/build/
+.idea/

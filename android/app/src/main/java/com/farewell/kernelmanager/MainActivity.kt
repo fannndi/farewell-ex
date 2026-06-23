@@ -7,16 +7,19 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import com.farewell.kernelmanager.kernel.AccessManager
 import com.farewell.kernelmanager.ui.navigation.Screen
 import com.farewell.kernelmanager.ui.navigation.bottomNavItems
 import com.farewell.kernelmanager.ui.screens.*
 import com.farewell.kernelmanager.ui.settings.TierAccessScreen
+import com.farewell.kernelmanager.ui.debug.DebugScreen
 import com.farewell.kernelmanager.ui.theme.FarewellKernelManagerTheme
 import com.farewell.kernelmanager.viewmodel.*
 
@@ -41,14 +44,29 @@ fun MainApp() {
     val settingsVm: SettingsViewModel = viewModel()
     val state by mainVm.state.collectAsState()
     val snackbar = remember { SnackbarHostState() }
+    val appCtx = LocalContext.current.applicationContext
 
     LaunchedEffect(Unit) {
+        mainVm.setAppContext(appCtx)
         mainVm.detectAccessMode()
-        snackbar.showSnackbar("Access: ${state.accessMode.name}")
     }
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbar) },
+        topBar = {
+            CenterAlignedTopAppBar(
+                title = {
+                    Text("Farewell Kernel Manager",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 20.sp,
+                        letterSpacing = 0.5.sp)
+                },
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+            )
+        },
         bottomBar = {
             NavigationBar {
                 val navBackStackEntry by navController.currentBackStackEntryAsState()
@@ -61,7 +79,7 @@ fun MainApp() {
                         onClick = {
                             if (currentRoute != screen.route) {
                                 navController.navigate(screen.route) {
-                                    popUpTo(Screen.Dashboard.route) { saveState = true }
+                                    popUpTo(Screen.Home.route) { saveState = true }
                                     launchSingleTop = true; restoreState = true
                                 }
                             }
@@ -71,18 +89,23 @@ fun MainApp() {
             }
         }
     ) { padding ->
-        NavHost(navController = navController, startDestination = Screen.Dashboard.route, modifier = Modifier.padding(padding)) {
-            composable(Screen.Dashboard.route) { DashboardScreen(state) }
-            composable(Screen.CPU.route) { CPUScreen(cpuVm) }
-            composable(Screen.GPU.route) { GPUScreen(gpuVm) }
-            composable(Screen.Memory.route) { MemoryScreen(memVm) }
-            composable(Screen.Thermal.route) { ThermalScreen(thermalVm) }
-            composable(Screen.Battery.route) { BatteryScreen(batteryVm) }
-            composable(Screen.Game.route) { GameScreen(gameVm) }
-            composable(Screen.Settings.route) {
-                SettingsScreen(onNavigateTier = { navController.navigate(Screen.TierAccess.route) })
+        NavHost(navController = navController, startDestination = Screen.Home.route,
+            modifier = Modifier.padding(padding)) {
+            composable(Screen.Home.route) {
+                HomeScreen(state, cpuVm, gpuVm, memVm, thermalVm, batteryVm, gameVm, snackbar)
+            }
+            composable(Screen.Access.route) {
+                AccessScreen(mainVm, snackbar)
+            }
+            composable(Screen.Setting.route) {
+                SettingScreen(
+                    accessModeName = state.accessMode.name,
+                    onNavigateTier = { navController.navigate(Screen.TierAccess.route) },
+                    onNavigateDebug = { navController.navigate(Screen.Debug.route) }
+                )
             }
             composable(Screen.TierAccess.route) { TierAccessScreen(viewModel = settingsVm) }
+            composable(Screen.Debug.route) { DebugScreen(mainVm) }
         }
     }
 }

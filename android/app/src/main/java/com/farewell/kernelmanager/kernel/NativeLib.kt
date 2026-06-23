@@ -5,6 +5,7 @@ import android.util.Log
 object NativeLib {
     private const val TAG = "NativeLib"
     private var isLoaded = false
+    private var loadError: String? = null
 
     init {
         try {
@@ -12,10 +13,18 @@ object NativeLib {
             isLoaded = true
             Log.d(TAG, "Native library loaded")
         } catch (e: UnsatisfiedLinkError) {
+            loadError = e.message
             Log.e(TAG, "Failed to load: ${e.message}")
+            Log.e(TAG, "ABI: ${android.os.Build.SUPPORTED_ABIS.joinToString()}")
+            isLoaded = false
+        } catch (e: Exception) {
+            loadError = "${e.javaClass.simpleName}: ${e.message}"
+            Log.e(TAG, "Unexpected error loading native lib", e)
             isLoaded = false
         }
     }
+
+    fun loadStatus(): String = if (isLoaded) "loaded" else "failed: ${loadError ?: "unknown"}"
 
     fun isAvailable(): Boolean = isLoaded
 
@@ -42,6 +51,11 @@ object NativeLib {
     external fun setGpuPowerLevelsNative(min: Int, max: Int): Int
     external fun setGpuForceNative(state: String, value: Boolean): Int
     external fun setGpuFreqLimitNative(min: Int, max: Int): Int
+
+    // GPU IOCTL (SELinux-safe via /dev/kgsl-3d0)
+    external fun readGpuFreqIoctlNative(): Int
+    external fun readGpuBusyIoctlNative(): Int
+    external fun readGpuModelIoctlNative(): String
 
     // Memory
     external fun readMemInfoNative(): String
@@ -232,6 +246,10 @@ object NativeLib {
 
     // Disk Stats
     external fun readDiskStatsNative(): String
+
+    // Debug Diagnostic
+    external fun runDebugDiagnosticNative(tierName: String): String
+    external fun readDebugLogNative(): String
 
     // ZygiskNext Companion
     external fun setZygiskPropertyOverrides(props: Array<String>): Unit

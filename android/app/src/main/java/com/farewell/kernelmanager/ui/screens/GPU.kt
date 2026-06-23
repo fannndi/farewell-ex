@@ -1,8 +1,6 @@
 package com.farewell.kernelmanager.ui.screens
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -12,15 +10,31 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.farewell.kernelmanager.viewmodel.GPUViewModel
+import com.farewell.kernelmanager.viewmodel.GpuState
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun GPUScreen(viewModel: GPUViewModel) {
+fun GPUScreen(viewModel: GPUViewModel, snackbar: SnackbarHostState? = null) {
     val state by viewModel.state.collectAsState()
+    Column(modifier = Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        GPUContent(viewModel, state, snackbar)
+    }
+}
 
-    Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text("GPU Control", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun GPUContent(viewModel: GPUViewModel, state: GpuState, snackbar: SnackbarHostState? = null) {
+    val scope = rememberCoroutineScope()
+    var showGovDropdown by remember { mutableStateOf(false) }
+
+    LaunchedEffect(state.lastWriteOk) {
+        state.lastWriteOk?.let { ok ->
+            snackbar?.showSnackbar(if (ok) "Applied" else "Failed")
+        }
+    }
+
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text("${state.vendor} ${state.model} | Driver: ${state.driverInfo}")
 
         Card(modifier = Modifier.fillMaxWidth()) {
@@ -28,8 +42,35 @@ fun GPUScreen(viewModel: GPUViewModel) {
                 Text("Status", fontWeight = FontWeight.Bold)
                 Text("Frequency: ${state.freq} MHz")
                 Text("Load: ${state.busy}%")
+                if (state.currentGovernor.isNotEmpty()) {
+                    Text("Governor: ${state.currentGovernor}")
+                }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Button(onClick = { viewModel.resetStats() }) { Text("Reset Stats") }
+                }
+            }
+        }
+
+        if (state.availablePolicies.isNotEmpty()) {
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Governor", fontWeight = FontWeight.Bold)
+                    ExposedDropdownMenuBox(expanded = showGovDropdown, onExpandedChange = { showGovDropdown = it }) {
+                        OutlinedTextField(
+                            value = state.currentGovernor.ifEmpty { "—" },
+                            onValueChange = {},
+                            readOnly = true,
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = showGovDropdown) },
+                            modifier = Modifier.menuAnchor().fillMaxWidth()
+                        )
+                        ExposedDropdownMenu(expanded = showGovDropdown, onDismissRequest = { showGovDropdown = false }) {
+                            state.availablePolicies.forEach { gov ->
+                                DropdownMenuItem(text = { Text(gov) }, onClick = {
+                                    showGovDropdown = false; viewModel.setGovernor(gov)
+                                })
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -43,28 +84,14 @@ fun GPUScreen(viewModel: GPUViewModel) {
             }
         }
 
-        if (state.availablePolicies.isNotEmpty()) {
-            Card(modifier = Modifier.fillMaxWidth()) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text("Available Governors", fontWeight = FontWeight.Bold)
-                    Text(state.availablePolicies.joinToString(", "))
-                }
-            }
-        }
-
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("Force Controls", fontWeight = FontWeight.Bold)
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    var forceClk by remember { mutableStateOf(false) }
-                    var forceBus by remember { mutableStateOf(false) }
-                    var forceRail by remember { mutableStateOf(false) }
-                    var forceNoNap by remember { mutableStateOf(false) }
-
-                    FilterChip(selected = forceClk, onClick = { forceClk = !forceClk; viewModel.setForce("force_clk_on", forceClk) }, label = { Text("Clk") })
-                    FilterChip(selected = forceBus, onClick = { forceBus = !forceBus; viewModel.setForce("force_bus_on", forceBus) }, label = { Text("Bus") })
-                    FilterChip(selected = forceRail, onClick = { forceRail = !forceRail; viewModel.setForce("force_rail_on", forceRail) }, label = { Text("Rail") })
-                    FilterChip(selected = forceNoNap, onClick = { forceNoNap = !forceNoNap; viewModel.setForce("force_no_nap", forceNoNap) }, label = { Text("NoNap") })
+                    FilterChip(selected = state.forceClk, onClick = { viewModel.setForce("force_clk_on", !state.forceClk) }, label = { Text("Clk") })
+                    FilterChip(selected = state.forceBus, onClick = { viewModel.setForce("force_bus_on", !state.forceBus) }, label = { Text("Bus") })
+                    FilterChip(selected = state.forceRail, onClick = { viewModel.setForce("force_rail_on", !state.forceRail) }, label = { Text("Rail") })
+                    FilterChip(selected = state.forceNoNap, onClick = { viewModel.setForce("force_no_nap", !state.forceNoNap) }, label = { Text("NoNap") })
                 }
             }
         }

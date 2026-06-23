@@ -1,8 +1,6 @@
 package com.farewell.kernelmanager.ui.screens
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -12,18 +10,24 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.farewell.kernelmanager.viewmodel.CPUViewModel
+import com.farewell.kernelmanager.viewmodel.CpuState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CPUScreen(viewModel: CPUViewModel) {
+fun CPUScreen(viewModel: CPUViewModel, snackbar: SnackbarHostState? = null) {
     val state by viewModel.state.collectAsState()
-    var selectedGovernor by remember { mutableStateOf("") }
-    var showGovernorDropdown by remember { mutableStateOf(false) }
+    Column(modifier = Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        CPUContent(viewModel, state)
+    }
+}
 
-    Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)) {
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun CPUContent(viewModel: CPUViewModel, state: CpuState, snackbar: SnackbarHostState? = null) {
+    val clusterDropdowns = remember { mutableStateMapOf<Int, Boolean>() }
+    val selectedGovernors = remember { mutableStateMapOf<Int, String>() }
 
-        Text("CPU Control", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text("Model: ${state.cpuModel} | Load: ${String.format("%.1f", state.cpuLoad)}% | Temp: ${String.format("%.1f", state.cpuTemp)}°C")
 
         state.clusters.forEach { cluster ->
@@ -32,20 +36,23 @@ fun CPUScreen(viewModel: CPUViewModel) {
                     Text("Cluster ${cluster.clusterNumber} (${cluster.cores.joinToString()})", fontWeight = FontWeight.Bold)
                     Text("Freq: ${cluster.minFreq}–${cluster.maxFreq} MHz | Governor: ${cluster.governor}")
                     Text("Cores: ${cluster.cores.size}", style = MaterialTheme.typography.bodySmall)
-
                     Text("Governor", fontWeight = FontWeight.SemiBold)
-                    ExposedDropdownMenuBox(expanded = showGovernorDropdown, onExpandedChange = { showGovernorDropdown = it }) {
+                    val expanded = clusterDropdowns[cluster.clusterNumber] ?: false
+                    val selected = selectedGovernors[cluster.clusterNumber] ?: ""
+                    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { clusterDropdowns[cluster.clusterNumber] = it }) {
                         OutlinedTextField(
-                            value = selectedGovernor.ifEmpty { cluster.governor },
+                            value = selected.ifEmpty { cluster.governor },
                             onValueChange = {},
                             readOnly = true,
-                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = showGovernorDropdown) },
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
                             modifier = Modifier.menuAnchor().fillMaxWidth()
                         )
-                        ExposedDropdownMenu(expanded = showGovernorDropdown, onDismissRequest = { showGovernorDropdown = false }) {
+                        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { clusterDropdowns[cluster.clusterNumber] = false }) {
                             cluster.availableGovernors.forEach { gov ->
                                 DropdownMenuItem(text = { Text(gov) }, onClick = {
-                                    selectedGovernor = gov; showGovernorDropdown = false; viewModel.setGovernor(gov)
+                                    selectedGovernors[cluster.clusterNumber] = gov
+                                    clusterDropdowns[cluster.clusterNumber] = false
+                                    viewModel.setGovernor(cluster.clusterNumber, gov)
                                 })
                             }
                         }

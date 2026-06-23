@@ -38,6 +38,12 @@ See `feature-catalog.md` — 15 categories, 200+ features, each with source, sys
 | 15 | ZN-AuditPatch | Audit log replacement | `modules/24-zn-auditpatch.md` |
 | 16 | LogFox | Crash logging | `modules/25-logfox.md` |
 
+### Sysfs Bypass Techniques (2 sources)
+| # | Source | Purpose | Modular Index |
+|---|--------|---------|---------------|
+| 17 | DevCheck | KGSL IOCTL + Android API bypass | `modules/27-kgsl-ioctl-bypass.md` |
+| 18 | Android API | BatteryManager + AThermal | `modules/28-android-api-reading.md` |
+
 ---
 
 ## Study Order

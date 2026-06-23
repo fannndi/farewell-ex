@@ -23,7 +23,7 @@ class CPUViewModel : PollingViewModel<CpuState>(CpuState(), intervalMs = 2000) {
         updateState { CpuState(clusters, cores, model, load, temp, false) }
     }
 
-    fun setGovernor(governor: String) {
+    fun setGovernor(cluster: Int, governor: String) {
         viewModelScopeIO { NativeLib.setGovernorNative(governor) }
     }
 

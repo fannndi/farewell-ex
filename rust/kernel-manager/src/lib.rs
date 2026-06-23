@@ -849,6 +849,23 @@ pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setDispl
     match gpu::set_display_mode(&m) { Ok(true) => 1, Err(e) => { eprintln!("setDisplayMode: {}", e); 0 }, _ => 0 }
 }
 
+// ==================== KGSL IOCTL — SELinux-safe GPU reading ====================
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_readGpuFreqIoctlNative(_env: JNIEnv, _class: JClass) -> jint {
+    gpu::read_gpu_freq_ioctl()
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_readGpuBusyIoctlNative(_env: JNIEnv, _class: JClass) -> jint {
+    gpu::read_gpu_busy_ioctl()
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_readGpuModelIoctlNative(env: JNIEnv, _class: JClass) -> jstring {
+    create_jstring_safe(&env, gpu::read_gpu_model_ioctl())
+}
+
 // ==================== CHARGING CURRENT ====================
 
 #[unsafe(no_mangle)]
@@ -942,4 +959,17 @@ pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_debounce
 #[unsafe(no_mangle)]
 pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_hasFarewellCompanionNative(_env: JNIEnv, _class: JClass) -> jint {
     if tier::has_farewell_companion() { 1 } else { 0 }
+}
+
+// ==================== DEBUG DIAGNOSTIC ====================
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_runDebugDiagnosticNative(mut env: JNIEnv, _class: JClass, tier_name: JString) -> jstring {
+    let t: String = env.get_string(&tier_name).map(|s| s.into()).unwrap_or_default();
+    create_jstring_safe(&env, checker::run_debug_diagnostic(&t))
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_readDebugLogNative(env: JNIEnv, _class: JClass) -> jstring {
+    create_jstring_safe(&env, checker::read_debug_log())
 }

@@ -1,8 +1,6 @@
 package com.farewell.kernelmanager.ui.screens
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -11,16 +9,22 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.farewell.kernelmanager.viewmodel.ThermalViewModel
+import com.farewell.kernelmanager.viewmodel.ThermalState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ThermalScreen(viewModel: ThermalViewModel) {
+fun ThermalScreen(viewModel: ThermalViewModel, snackbar: SnackbarHostState? = null) {
     val state by viewModel.state.collectAsState()
+    Column(modifier = Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        ThermalContent(state, onSetPreset = { viewModel.setPreset(it) })
+    }
+}
+
+@Composable
+fun ThermalContent(state: ThermalState, onSetPreset: (String) -> Unit = {}) {
     val presets = listOf("default", "extreme", "dynamic", "incalls", "cool")
 
-    Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text("Thermal Management", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text("CPU Temperature: ${String.format("%.1f", state.cpuTemp)}°C")
 
         Card(modifier = Modifier.fillMaxWidth()) {
@@ -28,11 +32,9 @@ fun ThermalScreen(viewModel: ThermalViewModel) {
                 Text("Thermal Presets", fontWeight = FontWeight.Bold)
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     presets.forEach { preset ->
-                        FilterChip(
-                            selected = state.selectedPreset == preset,
-                            onClick = { viewModel.setPreset(preset) },
-                            label = { Text(preset.replaceFirstChar { it.uppercase() }) }
-                        )
+                        FilterChip(selected = state.selectedPreset == preset,
+                            onClick = { onSetPreset(preset) },
+                            label = { Text(preset.replaceFirstChar { it.uppercase() }) })
                     }
                 }
             }

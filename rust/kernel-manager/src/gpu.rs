@@ -442,6 +442,98 @@ pub fn set_display_mode(mode: &str) -> SysfsResult<bool> {
     if sysfs::write_sysfs(path, mode) { Ok(true) } else { Err(SysfsError::IoError(path.to_string())) }
 }
 
+// ==================== KGSL IOCTL — SELinux-safe GPU reading ====================
+// Reads GPU via /dev/kgsl-3d0 char device (ioctl) instead of sysfs.
+// SELinux blocks sysfs on MIUI 14 but allows /dev/kgsl-3d0 ioctl.
+// Reference: DevCheck.apk (libgpuinfo, get_kgsl_prop)
+
+use std::mem;
+
+const KGSL_DEV: &[u8] = b"/dev/kgsl-3d0\0";
+const KGSL_PROP_GPUCLK: u32 = 6;
+const KGSL_PROP_BUSY_CYCLES: u32 = 2;
+const KGSL_PROP_VERSION_INFO: u32 = 1;
+
+// _IOWR('k', 0x09, sizeof(...)) = (3<<30) | (sizeof<<16) | ('k'<<8) | 0x09
+// sizeof(KgslGetProperty64) = 4+8+4 = 16 → 0xC0106B09
+// sizeof(KgslGetProperty32) = 4+4+4 = 12 → 0xC00C6B09
+const KGSL_IOCTL_GETPROP_64: i32 = -1071586551; // 0xC0106B09
+const KGSL_IOCTL_GETPROP_32: i32 = -1073211639; // 0xC00C6B09
+
+#[repr(C)]
+struct KgslGetProperty64 { prop_type: u32, value: *mut libc::c_void, size: u32 }
+#[repr(C)]
+struct KgslGetProperty32 { prop_type: u32, value: i32, size: u32 }
+
+/// Open KGSL device node. Returns fd or -1.
+fn kgsl_open() -> i32 {
+    unsafe { libc::open(KGSL_DEV.as_ptr() as *const libc::c_char, libc::O_RDWR) }
+}
+
+/// Read KGSL property via ioctl (tries 64-bit then 32-bit encoding).
+fn kgsl_getprop(fd: i32, prop_type: u32, buf: &mut [u8]) -> i32 {
+    // Try 64-bit pointer variant first
+    let p64 = KgslGetProperty64 {
+        prop_type,
+        value: buf.as_mut_ptr() as *mut libc::c_void,
+        size: buf.len() as u32,
+    };
+    let ret = unsafe { libc::ioctl(fd, KGSL_IOCTL_GETPROP_64, &p64 as *const KgslGetProperty64) };
+    if ret == 0 { return 0; }
+    // Fallback: 32-bit value variant (buffer address fit in 32 bits)
+    let p32 = KgslGetProperty32 {
+        prop_type,
+        value: buf.as_mut_ptr() as i32,
+        size: buf.len() as u32,
+    };
+    unsafe { libc::ioctl(fd, KGSL_IOCTL_GETPROP_32, &p32 as *const KgslGetProperty32) }
+}
+
+/// Read GPU frequency via KGSL IOCTL. Returns MHz or 0 on error.
+///
+/// **Device:** `/dev/kgsl-3d0`
+/// **Root:** Not required (SELinux allows device node ioctl)
+pub fn read_gpu_freq_ioctl() -> i32 {
+    let fd = kgsl_open();
+    if fd < 0 { return 0; }
+    let mut buf = [0u8; 8];
+    let ret = kgsl_getprop(fd, KGSL_PROP_GPUCLK, &mut buf);
+    unsafe { libc::close(fd); }
+    if ret < 0 { return 0; }
+    let val = u32::from_ne_bytes([buf[0], buf[1], buf[2], buf[3]]);
+    if val > 1_000_000 { (val / 1_000_000) as i32 }
+    else if val > 1000 { (val / 1000) as i32 }
+    else { val as i32 }
+}
+
+/// Read GPU busy percentage via KGSL IOCTL. Returns 0-100 or 0 on error.
+pub fn read_gpu_busy_ioctl() -> i32 {
+    let fd = kgsl_open();
+    if fd < 0 { return 0; }
+    #[repr(C)]
+    struct BusyInfo { busy: u64, total: u64 }
+    let mut info = BusyInfo { busy: 0, total: 0 };
+    let buf = unsafe { std::slice::from_raw_parts_mut(&mut info as *mut BusyInfo as *mut u8, mem::size_of::<BusyInfo>()) };
+    let ret = kgsl_getprop(fd, KGSL_PROP_BUSY_CYCLES, buf);
+    unsafe { libc::close(fd); }
+    if ret < 0 || info.total == 0 { return 0; }
+    ((info.busy * 100 / info.total) as i32).min(100)
+}
+
+/// Read GPU model via KGSL IOCTL. Returns model string or "Adreno".
+pub fn read_gpu_model_ioctl() -> String {
+    let fd = kgsl_open();
+    if fd < 0 { return "Adreno".to_string(); }
+    #[repr(C)]
+    struct Version { drv_mj: u32, drv_mn: u32, dev_mj: u32, dev_mn: u32 }
+    let mut ver = Version { drv_mj: 0, drv_mn: 0, dev_mj: 0, dev_mn: 0 };
+    let buf = unsafe { std::slice::from_raw_parts_mut(&mut ver as *mut Version as *mut u8, mem::size_of::<Version>()) };
+    let ret = kgsl_getprop(fd, KGSL_PROP_VERSION_INFO, buf);
+    unsafe { libc::close(fd); }
+    if ret < 0 { return "Adreno".to_string(); }
+    format!("Adreno {:03}{}", ver.dev_mj, ver.dev_mn)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

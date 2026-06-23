@@ -25,7 +25,8 @@ object RootManager {
     }
 
     suspend fun writeFile(path: String, content: String): Result<Unit> = withContext(Dispatchers.IO) {
-        executeCommand("echo '$content' > $path").map { Unit }
+        val escaped = content.replace("'", "'\\''")
+        executeCommand("echo '$escaped' > $path").map { Unit }
     }
 
     suspend fun getProp(name: String): String = withContext(Dispatchers.IO) {

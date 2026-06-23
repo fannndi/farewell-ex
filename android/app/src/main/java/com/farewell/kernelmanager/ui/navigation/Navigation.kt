@@ -5,18 +5,11 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.ui.graphics.vector.ImageVector
 
 sealed class Screen(val route: String, val title: String, val icon: ImageVector) {
-    object Dashboard : Screen("dashboard", "Dashboard", Icons.Default.Dashboard)
-    object CPU : Screen("cpu", "CPU", Icons.Default.Speed)
-    object GPU : Screen("gpu", "GPU", Icons.Default.Memory)
-    object Memory : Screen("memory", "Memory", Icons.Default.Storage)
-    object Thermal : Screen("thermal", "Thermal", Icons.Default.Thermostat)
-    object Battery : Screen("battery", "Battery", Icons.Default.BatteryFull)
-    object Game : Screen("game", "Game", Icons.Default.SportsEsports)
-    object Settings : Screen("settings", "Settings", Icons.Default.Settings)
+    object Home : Screen("home", "Home", Icons.Default.Home)
+    object Access : Screen("access", "Access", Icons.Default.Tune)
+    object Setting : Screen("setting", "Setting", Icons.Default.Settings)
     object TierAccess : Screen("tier", "Tier Access", Icons.Default.Security)
+    object Debug : Screen("debug", "Diagnostic", Icons.Default.BugReport)
 }
 
-val bottomNavItems = listOf(
-    Screen.Dashboard, Screen.CPU, Screen.GPU, Screen.Memory,
-    Screen.Thermal, Screen.Battery, Screen.Game, Screen.Settings
-)
+val bottomNavItems = listOf(Screen.Home, Screen.Access, Screen.Setting)

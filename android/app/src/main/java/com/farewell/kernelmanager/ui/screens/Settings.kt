@@ -14,40 +14,9 @@ import androidx.compose.ui.unit.dp
 import com.farewell.kernelmanager.kernel.AccessManager
 import com.farewell.kernelmanager.kernel.AccessMode
 
+@Deprecated("Use SettingScreen instead", replaceWith = ReplaceWith("SettingScreen(accessModeName, onNavigateTier)"))
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(onNavigateTier: () -> Unit = {}) {
-    Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text("Settings", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-
-        Card(modifier = Modifier.fillMaxWidth()) {
-            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Access Mode", fontWeight = FontWeight.Bold)
-                Text("Current: ${AccessManager.currentMode.name}", style = MaterialTheme.typography.bodySmall)
-                Text("Root: ${AccessManager.isRootAvailable()} | Shizuku: ${AccessManager.isShizukuAvailable()}",
-                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-        }
-
-        Card(modifier = Modifier.fillMaxWidth(), onClick = onNavigateTier) {
-            Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.Security, contentDescription = null, modifier = Modifier.padding(end = 12.dp))
-                Column(modifier = Modifier.weight(1f)) {
-                    Text("Tier Access", fontWeight = FontWeight.Bold)
-                    Text("Feature unlock status & framework detection", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-                Icon(Icons.Default.ChevronRight, contentDescription = null)
-            }
-        }
-
-        Card(modifier = Modifier.fillMaxWidth()) {
-            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("About", fontWeight = FontWeight.Bold)
-                Text("Farewell Kernel Manager v1.0.0")
-                Text("Target: POCO X3 NFC (SM7150-AC, Adreno 618)")
-                Text("Stack: Rust SDK + Kotlin/Compose + Material 3")
-            }
-        }
-    }
+    SettingScreen(accessModeName = AccessManager.currentMode.name, onNavigateTier = onNavigateTier, onNavigateDebug = {})
 }

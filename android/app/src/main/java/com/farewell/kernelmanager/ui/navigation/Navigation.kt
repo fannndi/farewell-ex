@@ -13,6 +13,10 @@ sealed class Screen(val route: String, val title: String, val icon: ImageVector)
     object Battery : Screen("battery", "Battery", Icons.Default.BatteryFull)
     object Game : Screen("game", "Game", Icons.Default.SportsEsports)
     object Settings : Screen("settings", "Settings", Icons.Default.Settings)
+    object TierAccess : Screen("tier", "Tier Access", Icons.Default.Security)
 }
 
-val bottomNavItems = listOf(Screen.Dashboard, Screen.CPU, Screen.GPU, Screen.Memory, Screen.Thermal, Screen.Battery, Screen.Game, Screen.Settings)
+val bottomNavItems = listOf(
+    Screen.Dashboard, Screen.CPU, Screen.GPU, Screen.Memory,
+    Screen.Thermal, Screen.Battery, Screen.Game, Screen.Settings
+)

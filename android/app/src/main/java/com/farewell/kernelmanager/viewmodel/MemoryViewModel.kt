@@ -1,11 +1,7 @@
 package com.farewell.kernelmanager.viewmodel
 
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
+import android.util.Log
 import com.farewell.kernelmanager.kernel.NativeLib
-import kotlinx.coroutines.*
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 
 data class MemoryState(
     val totalMb: Long = 0, val availableMb: Long = 0, val usedMb: Long = 0, val cachedMb: Long = 0,
@@ -16,19 +12,9 @@ data class MemoryState(
     val isLoading: Boolean = true,
 )
 
-class MemoryViewModel : ViewModel() {
-    private val _state = MutableStateFlow(MemoryState())
-    val state: StateFlow<MemoryState> = _state
-    private var job: Job? = null
+class MemoryViewModel : PollingViewModel<MemoryState>(MemoryState(), intervalMs = 3000) {
 
-    init { startPolling() }
-
-    private fun startPolling() {
-        job?.cancel()
-        job = viewModelScope.launch { while (isActive) { refresh(); delay(3000) } }
-    }
-
-    private suspend fun refresh() {
+    override suspend fun refresh() {
         if (!NativeLib.isAvailable()) return
         try {
             val memJson = NativeLib.readMemInfoNative()
@@ -36,32 +22,32 @@ class MemoryViewModel : ViewModel() {
             val total = memObj.getLong("total_kb")
             val available = memObj.getLong("available_kb")
             val cached = memObj.getLong("cached_kb")
-            val swapTotal = try { memObj.getLong("swap_total_kb") } catch (e: Exception) { 0L }
+            val swapTotal = try { memObj.getLong("swap_total_kb") } catch (_: Exception) { 0L }
             val zramSize = NativeLib.readZramSizeNative()
             val ratio = NativeLib.getZramCompressionRatioNative()
             val algo = NativeLib.getZramAlgorithmNative()
             val swappiness = NativeLib.getSwappinessNative()
             val pressure = NativeLib.getMemoryPressureNative()
             val algosJson = NativeLib.getAvailableZramAlgorithmsNative()
-            val algos = try { org.json.JSONArray(algosJson).let { arr -> (0 until arr.length()).map { arr.getString(it) } } } catch (e: Exception) { emptyList() }
-            _state.value = MemoryState(
-                totalMb = total / 1024, availableMb = available / 1024, usedMb = (total - available) / 1024,
-                cachedMb = cached / 1024, swapTotalMb = swapTotal / 1024, swapUsedMb = 0,
-                zramDisksize = zramSize, zramRatio = ratio, zramAlgorithm = algo,
-                swappiness = swappiness, pressure = pressure, availableAlgorithms = algos, isLoading = false
-            )
-        } catch (e: Exception) { }
+            val algos = try { org.json.JSONArray(algosJson).let { arr -> (0 until arr.length()).map { arr.getString(it) } } } catch (_: Exception) { emptyList() }
+            updateState {
+                MemoryState(
+                    totalMb = total / 1024, availableMb = available / 1024, usedMb = (total - available) / 1024,
+                    cachedMb = cached / 1024, swapTotalMb = swapTotal / 1024, swapUsedMb = 0,
+                    zramDisksize = zramSize, zramRatio = ratio, zramAlgorithm = algo,
+                    swappiness = swappiness, pressure = pressure, availableAlgorithms = algos, isLoading = false
+                )
+            }
+        } catch (e: Exception) { Log.e("MemoryViewModel", "refresh failed", e) }
     }
 
     fun setSwappiness(value: Int) {
-        viewModelScope.launch(Dispatchers.IO) { NativeLib.setSwappinessNative(value) }
-        _state.value = _state.value.copy(swappiness = value)
+        updateState { it.copy(swappiness = value) }
+        viewModelScopeIO { NativeLib.setSwappinessNative(value) }
     }
 
     fun setDirtyRatio(value: Int) {
-        viewModelScope.launch(Dispatchers.IO) { NativeLib.setDirtyRatioNative(value) }
-        _state.value = _state.value.copy(dirtyRatio = value)
+        updateState { it.copy(dirtyRatio = value) }
+        viewModelScopeIO { NativeLib.setDirtyRatioNative(value) }
     }
-
-    override fun onCleared() { job?.cancel() }
 }

@@ -3,6 +3,8 @@ package com.farewell.kernelmanager.ui.screens
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -14,9 +16,7 @@ import com.farewell.kernelmanager.kernel.AccessMode
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen() {
-    var accessMode by remember { mutableStateOf(AccessMode.NON_ROOT) }
-
+fun SettingsScreen(onNavigateTier: () -> Unit = {}) {
     Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text("Settings", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
@@ -25,17 +25,19 @@ fun SettingsScreen() {
             Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("Access Mode", fontWeight = FontWeight.Bold)
                 Text("Current: ${AccessManager.currentMode.name}", style = MaterialTheme.typography.bodySmall)
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    AccessMode.values().forEach { mode ->
-                        FilterChip(
-                            selected = accessMode == mode,
-                            onClick = { accessMode = mode },
-                            label = { Text(mode.name) }
-                        )
-                    }
-                }
                 Text("Root: ${AccessManager.isRootAvailable()} | Shizuku: ${AccessManager.isShizukuAvailable()}",
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+
+        Card(modifier = Modifier.fillMaxWidth(), onClick = onNavigateTier) {
+            Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.Security, contentDescription = null, modifier = Modifier.padding(end = 12.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("Tier Access", fontWeight = FontWeight.Bold)
+                    Text("Feature unlock status & framework detection", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                Icon(Icons.Default.ChevronRight, contentDescription = null)
             }
         }
 

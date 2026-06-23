@@ -1,11 +1,7 @@
 package com.farewell.kernelmanager.viewmodel
 
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
+import android.util.Log
 import com.farewell.kernelmanager.kernel.NativeLib
-import kotlinx.coroutines.*
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 
 data class BatteryState(
     val level: Int = 0, val temp: Float = 0f, val voltage: Float = 0f,
@@ -13,22 +9,14 @@ data class BatteryState(
     val health: String = "Unknown", val cycleCount: Int = 0,
     val capacityLevel: Float = 100f, val status: String = "Unknown",
     val bypassEnabled: Boolean = false,
+    val chargeCurrentMax: Int = 0,
+    val usbCurrentMax: Int = 0,
     val isLoading: Boolean = true,
 )
 
-class BatteryViewModel : ViewModel() {
-    private val _state = MutableStateFlow(BatteryState())
-    val state: StateFlow<BatteryState> = _state
-    private var job: Job? = null
+class BatteryViewModel : PollingViewModel<BatteryState>(BatteryState(), intervalMs = 3000) {
 
-    init { startPolling() }
-
-    private fun startPolling() {
-        job?.cancel()
-        job = viewModelScope.launch { while (isActive) { refresh(); delay(3000) } }
-    }
-
-    private suspend fun refresh() {
+    override suspend fun refresh() {
         if (!NativeLib.isAvailable()) return
         try {
             val level = NativeLib.readBatteryLevel() ?: 0
@@ -39,16 +27,27 @@ class BatteryViewModel : ViewModel() {
             val health = NativeLib.readBatteryHealth() ?: "Unknown"
             val cycle = NativeLib.readCycleCount() ?: -1
             val capLevel = NativeLib.readBatteryCapacityLevel() ?: 100f
-            _state.value = BatteryState(level, temp, voltage, current, isCharging, health, cycle, capLevel, "Unknown", _state.value.bypassEnabled, false)
-        } catch (e: Exception) { }
+            val chargeMax = NativeLib.getConstantChargeCurrentMaxNative()
+            val usbMax = NativeLib.getUsbCurrentMaxNative()
+            updateState {
+                BatteryState(level, temp, voltage, current, isCharging, health, cycle, capLevel,
+                    "Unknown", it.bypassEnabled, chargeMax, usbMax, false)
+            }
+        } catch (e: Exception) { Log.e("BatteryViewModel", "refresh failed", e) }
     }
 
     fun toggleBypass(enable: Boolean) {
-        viewModelScope.launch(Dispatchers.IO) {
-            NativeLib.setBypassChargingNative(enable)
-            _state.value = _state.value.copy(bypassEnabled = enable)
-        }
+        updateState { it.copy(bypassEnabled = enable) }
+        viewModelScopeIO { NativeLib.setBypassChargingNative(enable) }
     }
 
-    override fun onCleared() { job?.cancel() }
+    fun setChargeCurrentMax(ua: Int) {
+        updateState { it.copy(chargeCurrentMax = ua) }
+        viewModelScopeIO { NativeLib.setConstantChargeCurrentMaxNative(ua) }
+    }
+
+    fun setUsbCurrentMax(ua: Int) {
+        updateState { it.copy(usbCurrentMax = ua) }
+        viewModelScopeIO { NativeLib.setUsbCurrentMaxNative(ua) }
+    }
 }

@@ -16,9 +16,9 @@ import com.farewell.kernelmanager.kernel.AccessManager
 import com.farewell.kernelmanager.ui.navigation.Screen
 import com.farewell.kernelmanager.ui.navigation.bottomNavItems
 import com.farewell.kernelmanager.ui.screens.*
+import com.farewell.kernelmanager.ui.settings.TierAccessScreen
 import com.farewell.kernelmanager.ui.theme.FarewellKernelManagerTheme
 import com.farewell.kernelmanager.viewmodel.*
-import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -37,8 +37,9 @@ fun MainApp() {
     val memVm: MemoryViewModel = viewModel()
     val thermalVm: ThermalViewModel = viewModel()
     val batteryVm: BatteryViewModel = viewModel()
+    val gameVm: GameViewModel = viewModel()
+    val settingsVm: SettingsViewModel = viewModel()
     val state by mainVm.state.collectAsState()
-    val scope = rememberCoroutineScope()
     val snackbar = remember { SnackbarHostState() }
 
     LaunchedEffect(Unit) {
@@ -77,8 +78,11 @@ fun MainApp() {
             composable(Screen.Memory.route) { MemoryScreen(memVm) }
             composable(Screen.Thermal.route) { ThermalScreen(thermalVm) }
             composable(Screen.Battery.route) { BatteryScreen(batteryVm) }
-            composable(Screen.Game.route) { GameScreen() }
-            composable(Screen.Settings.route) { SettingsScreen() }
+            composable(Screen.Game.route) { GameScreen(gameVm) }
+            composable(Screen.Settings.route) {
+                SettingsScreen(onNavigateTier = { navController.navigate(Screen.TierAccess.route) })
+            }
+            composable(Screen.TierAccess.route) { TierAccessScreen(viewModel = settingsVm) }
         }
     }
 }

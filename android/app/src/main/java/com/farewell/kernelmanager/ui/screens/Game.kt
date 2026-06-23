@@ -11,10 +11,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.farewell.kernelmanager.viewmodel.GameViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun GameScreen() {
+fun GameScreen(viewModel: GameViewModel) {
+    val state by viewModel.state.collectAsState()
+
     Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text("Game Mode", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
@@ -23,11 +26,14 @@ fun GameScreen() {
             Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("Performance Preset", fontWeight = FontWeight.Bold)
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    var selected by remember { mutableStateOf("balanced") }
-                    FilterChip(selected = selected == "powersave", onClick = { selected = "powersave" }, label = { Text("Powersave") })
-                    FilterChip(selected = selected == "balanced", onClick = { selected = "balanced" }, label = { Text("Balanced") })
-                    FilterChip(selected = selected == "performance", onClick = { selected = "performance" }, label = { Text("Performance") })
-                    FilterChip(selected = selected == "monster", onClick = { selected = "monster" }, label = { Text("Monster") })
+                    val presets = listOf("powersave", "balanced", "performance", "monster")
+                    presets.forEach { p ->
+                        FilterChip(
+                            selected = state.preset == p,
+                            onClick = { viewModel.setPreset(p) },
+                            label = { Text(p.replaceFirstChar { it.uppercase() }) }
+                        )
+                    }
                 }
             }
         }
@@ -36,12 +42,13 @@ fun GameScreen() {
             Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("Quick Actions", fontWeight = FontWeight.Bold)
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    var dnd by remember { mutableStateOf(false) }
-                    var gpuBoost by remember { mutableStateOf(false) }
-                    var ramClear by remember { mutableStateOf(false) }
-                    FilterChip(selected = dnd, onClick = { dnd = !dnd }, label = { Text("DND") }, leadingIcon = { Icon(Icons.Default.DoNotDisturbOn, contentDescription = null) })
-                    FilterChip(selected = gpuBoost, onClick = { gpuBoost = !gpuBoost }, label = { Text("GPU Boost") }, leadingIcon = { Icon(Icons.Default.Speed, contentDescription = null) })
-                    FilterChip(selected = ramClear, onClick = { ramClear = !ramClear }, label = { Text("RAM Clear") }, leadingIcon = { Icon(Icons.Default.CleaningServices, contentDescription = null) })
+                    FilterChip(selected = state.dndEnabled, onClick = { viewModel.toggleDnd() },
+                        label = { Text("DND") }, leadingIcon = { Icon(Icons.Default.DoNotDisturbOn, contentDescription = null) })
+                    FilterChip(selected = state.adrenoboost > 0, onClick = {
+                        if (state.adrenoboost > 0) viewModel.setAdrenoboost(0) else viewModel.setAdrenoboost(1)
+                    }, label = { Text("GPU Boost") }, leadingIcon = { Icon(Icons.Default.Speed, contentDescription = null) })
+                    FilterChip(selected = false, onClick = { viewModel.clearRam() },
+                        label = { Text("RAM Clear") }, leadingIcon = { Icon(Icons.Default.CleaningServices, contentDescription = null) })
                 }
             }
         }
@@ -49,8 +56,12 @@ fun GameScreen() {
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("Game Detection", fontWeight = FontWeight.Bold)
-                Text("Automatically detect and apply profiles when a game is launched.", style = MaterialTheme.typography.bodySmall)
-                Text("Coming soon — requires foreground app detection service.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("Foreground: ${state.foregroundApp.ifEmpty { "—" }}", style = MaterialTheme.typography.bodySmall)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("Auto-detect games", modifier = Modifier.weight(1f))
+                    Switch(checked = state.gameDetectActive, onCheckedChange = { viewModel.toggleGameDetect(it) })
+                }
+                Text("Applies performance profile when a game launches.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }

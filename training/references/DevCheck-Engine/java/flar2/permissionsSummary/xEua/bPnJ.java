@@ -1,0 +1,54 @@
+package flar2.devcheck.permissionsSummary.xEua;
+
+/* loaded from: classes.dex */
+public class bPnJ {
+    public static String BXXLSazWUwvThUD;
+    public static String CIp;
+    public static String Ezj;
+    public static String FigjATaImLSjneh;
+    public static String GGjXgDDu;
+    public static String GZbbtSSP;
+    public static String HThKTrYwSLJoS;
+    public static String Hgrf;
+    public static String JgCzjoQHj;
+    public static String MgQyXLTGdzoWch;
+    public static String NisPDiPHkggJa;
+    public static String OZwmQwvE;
+    public static String OgqF;
+    public static String QaPhSgLt;
+    public static String QfRMBPNsKB;
+    public static String RIiA;
+    public static String TQsGxoiBwx;
+    public static String VQtDdbdgRuDr;
+    public static String XhweOxIGcBuy;
+    public static String YAGTWkDeybh;
+    public static String YfpqU;
+    public static String ZEDkULQUx;
+    public static String ZEitkOZMdYmcdo;
+    public static String byclMhfchTzT;
+    public static String cUbMEO;
+    public static String cekRpyRXDEl;
+    public static String etcXTkBYg;
+    public static String jHGTgRZCDFWuHlk;
+    public static String kYEWuKYmxwE;
+    public static String lhCQuXsDweLE;
+    public static String ljfqXmOoTSkmc;
+    public static String lmizvlxitziKMI;
+    public static String mVGCD;
+    public static String numbXVGuatxueIH;
+    public static String oUP;
+    public static String orpFH;
+    public static String rJWATLyI;
+    public static String rbjaDKOKhL;
+    public static String rymtQKoQ;
+    public static String scqasIntXPOnbo;
+    public static String taH;
+    public static String uVKcO;
+    public static String wMXprRGYQluUq;
+    public static String wRWfc;
+    public static String wfYZewSumAzOmIY;
+    public static String xquKozmhwoVUxRK;
+    public static String yebLXekZZYEdV;
+    public static String yqVex;
+    public static String zXI;
+}

@@ -82,3 +82,8 @@ See `feature-catalog.md` — 16 categories, 210+ features, each with source, sys
 | 16 | DevCheck KGSL IOCTL | GPU via /dev/kgsl-3d0 | ~5 |
 | 17 | Android BatteryManager | Battery via API (no root) | ~3 |
 | 18 | Fallback Chain | Multi-layer orchestrator | ~5 |
+
+### Parameter Mapping (1 source)
+| Phase | Source | Focus | Files |
+|-------|--------|-------|-------|
+| 19 | DevCheck Param Map | 80+ rootless parameters | `modules/30-devcheck-parameter-map.md` |

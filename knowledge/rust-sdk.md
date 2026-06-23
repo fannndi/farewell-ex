@@ -201,6 +201,7 @@ struct CoreInfo {
 | `set_simple_gpu_activate(active)` | `/sys/module/simple_gpu_algorithm/parameters/simple_gpu_activate` | write |
 | `set_simple_gpu_laziness(val)` | `simple_laziness` | write |
 | `set_simple_gpu_ramp_threshold(val)` | `simple_ramp_threshold` | write |
+| `read_gpu_freq_ioctl()` | `/dev/kgsl-3d0` IOCTL GETPROP (type 6) | IOCTL |
 | `has_bus_dcvs()` | `/sys/devices/system/cpu/bus_dcvs/*` | 0ms |
 | `get_bus_dcvs_components()` | `bus_dcvs/{subdirs}` | 5000ms |
 | `set_bus_dcvs_freq(name, min, max)` | `bus_dcvs/{name}/min_freq, max_freq` | write |

@@ -145,4 +145,52 @@ Priority 3 — Vector module per-app DPI
   ├── Package-based config lookup
   ├── Zero flicker config switch
   └── (Sumber: modules/22-vector.md, display_control.rs)
+
+Priority 4 — Fix GPU IOCTL constants
+  ├── Analisa kernel KGSL header untuk correct ioctl request code
+  ├── Test dengan berbagai konfigurasi property type
+  ├── Alternatif: port DevCheck's libgpuinfo library langsung
+  └── (Referensi: modules/27-kgsl-ioctl-bypass.md)
+
+Priority 5 — Shizuku UserService AIDL upgrade
+  ├── Define IShellService.aidl
+  ├── Implement ShellService
+  ├── Replace newProcess() reflection with UserService
+  └── (Referensi: modules/28-android-api-reading.md)
 ```
+
+## SELinux Bypass Reference — DevCheck Analysis
+
+**Source:** `DevCheck.apk` reverse engineering (libdevcheck.so + libgpuinfo)
+**Status:** ✅ EXTRACTED — see `training/references/DevCheck-Sysfs-Bypass/`
+
+### Key Findings
+
+DevCheck reads system data WITHOUT root on MIUI 14 via:
+
+| Data | Method | SELinux Label | Status |
+|------|--------|--------------|--------|
+| GPU | `/dev/kgsl-3d0` IOCTL | `kgsl_device` | ✅ Bisa (ioctl constant perlu tepat) |
+| Battery | `BatteryManager` Android API | system API | ✅ Bisa |
+| Temp | `AThermal` NDK C API | system API | ✅ Bisa (API 30+) |
+
+### Why Not Sysfs
+
+```
+/sys/class/kgsl/*            → SELinux: sysfs → DENIED
+/sys/class/power_supply/*    → SELinux: sysfs → DENIED
+/proc/stat via JNI libc open → SELinux: proc  → DENIED
+
+/dev/kgsl-3d0                → SELinux: kgsl_device → ALLOWED
+BatteryManager.getIntProperty()  → system API → ALLOWED
+AThermal_getThermalHeadroom()    → NDK API (API 30+) → ALLOWED
+```
+
+### Files
+
+| File | Role |
+|------|------|
+| `training/references/DevCheck-Sysfs-Bypass/` | All reference source code |
+| `knowledge/modules/27-kgsl-ioctl-bypass.md` | KGSL IOCTL documentation |
+| `knowledge/modules/28-android-api-reading.md` | Android API reading |
+| `knowledge/modules/29-fallback-chain.md` | Fallback chain architecture |

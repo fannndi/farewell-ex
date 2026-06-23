@@ -8,7 +8,7 @@ Progress: 2,115/2,115 (100%) — VERIFIED
 
 ## Feature Catalog
 
-See `feature-catalog.md` — 15 categories, 200+ features, each with source, sysfs path, root requirement, and complexity.
+See `feature-catalog.md` — 16 categories, 210+ features, each with source, sysfs path, root requirement, and complexity.
 
 ---
 
@@ -44,6 +44,11 @@ See `feature-catalog.md` — 15 categories, 200+ features, each with source, sys
 | 17 | DevCheck | KGSL IOCTL + Android API bypass | `modules/27-kgsl-ioctl-bypass.md` |
 | 18 | Android API | BatteryManager + AThermal | `modules/28-android-api-reading.md` |
 
+### Fallback Chain Architecture (1 source)
+| # | Source | Purpose | Modular Index |
+|---|--------|---------|---------------|
+| 19 | farewell-ex app | Multi-layer reader (IOCTL→API→sysfs→shell) | `modules/29-fallback-chain.md` |
+
 ---
 
 ## Study Order
@@ -70,3 +75,10 @@ See `feature-catalog.md` — 15 categories, 200+ features, each with source, sys
 | 13 | ZN-AuditPatch | Audit log patterns | ~3 |
 | 14 | LogFox | Crash logging + export | ~10 |
 | 15 | FPSViewer | FPS overlay + SurfaceFlinger latency | ~5 |
+
+### Sysfs Bypass (3 sources)
+| Phase | Source | Focus | Files |
+|-------|--------|-------|-------|
+| 16 | DevCheck KGSL IOCTL | GPU via /dev/kgsl-3d0 | ~5 |
+| 17 | Android BatteryManager | Battery via API (no root) | ~3 |
+| 18 | Fallback Chain | Multi-layer orchestrator | ~5 |

@@ -1,6 +1,6 @@
 package com.farewell.kernelmanager.viewmodel
 
-import com.farewell.kernelmanager.kernel.NativeLib
+import com.farewell.kernelmanager.kernel.native.NativeLib
 
 data class GpuState(
     val vendor: String = "Unknown",

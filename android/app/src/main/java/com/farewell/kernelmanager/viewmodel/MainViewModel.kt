@@ -2,7 +2,9 @@ package com.farewell.kernelmanager.viewmodel
 
 import android.os.Build
 import android.util.Log
-import com.farewell.kernelmanager.kernel.*
+import com.farewell.kernelmanager.kernel.access.*
+import com.farewell.kernelmanager.kernel.native.NativeLib
+import com.farewell.kernelmanager.kernel.reader.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 

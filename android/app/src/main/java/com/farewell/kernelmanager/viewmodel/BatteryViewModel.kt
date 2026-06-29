@@ -1,8 +1,8 @@
 package com.farewell.kernelmanager.viewmodel
 
 import android.util.Log
-import com.farewell.kernelmanager.kernel.NativeLib
-import com.farewell.kernelmanager.kernel.SysfsReader
+import com.farewell.kernelmanager.kernel.native.NativeLib
+import com.farewell.kernelmanager.kernel.reader.SysfsReader
 
 data class BatteryState(
     val level: Int = 0, val temp: Float = 0f, val voltage: Float = 0f,

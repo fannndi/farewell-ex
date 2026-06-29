@@ -1,5 +1,6 @@
-package com.farewell.kernelmanager.kernel
+package com.farewell.kernelmanager.kernel.reader
 
+import com.farewell.kernelmanager.kernel.access.AccessManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 

@@ -1,4 +1,4 @@
-package com.farewell.kernelmanager.kernel
+package com.farewell.kernelmanager.kernel.reader
 
 import android.content.Context
 import android.os.BatteryManager

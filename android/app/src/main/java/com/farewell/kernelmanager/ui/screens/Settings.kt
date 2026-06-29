@@ -11,8 +11,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.farewell.kernelmanager.kernel.AccessManager
-import com.farewell.kernelmanager.kernel.AccessMode
+import com.farewell.kernelmanager.kernel.access.AccessManager
+import com.farewell.kernelmanager.kernel.access.AccessMode
 
 @Deprecated("Use SettingScreen instead", replaceWith = ReplaceWith("SettingScreen(accessModeName, onNavigateTier)"))
 @OptIn(ExperimentalMaterial3Api::class)

@@ -1,7 +1,11 @@
-package com.farewell.kernelmanager.kernel
+package com.farewell.kernelmanager.kernel.reader
 
 import android.content.Context
 import android.os.BatteryManager
+import com.farewell.kernelmanager.kernel.access.AccessManager
+import com.farewell.kernelmanager.kernel.access.RootManager
+import com.farewell.kernelmanager.kernel.access.ShizukuManager
+import com.farewell.kernelmanager.kernel.native.NativeLib
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 

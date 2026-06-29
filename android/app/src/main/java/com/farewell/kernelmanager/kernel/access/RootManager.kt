@@ -1,4 +1,4 @@
-package com.farewell.kernelmanager.kernel
+package com.farewell.kernelmanager.kernel.access
 
 import android.util.Log
 import com.topjohnwu.superuser.Shell

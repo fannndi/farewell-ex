@@ -1,4 +1,4 @@
-package com.farewell.kernelmanager.kernel
+package com.farewell.kernelmanager.kernel.access
 
 import android.content.pm.PackageManager
 import android.util.Log

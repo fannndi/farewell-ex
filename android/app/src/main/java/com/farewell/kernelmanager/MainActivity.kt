@@ -53,12 +53,12 @@ fun MainApp() {
     val appCtx = LocalContext.current.applicationContext
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
-    val subScreenRoutes = listOf("debug", "tier", "thermal", "kernel", "display", "xiaomi")
+    val subScreenRoutes = listOf("debug", "tier", "thermal", "display", "xiaomi", "memory")
     val isSubScreen = currentRoute in subScreenRoutes
     val currentTitle = bottomNavItems.find { it.route == currentRoute }?.title ?:
         when (currentRoute) { "more" -> "More"; "thermal" -> "Thermal"; "kernel" -> "Kernel";
             "display" -> "Display"; "xiaomi" -> "Xiaomi"; "debug" -> "Diagnostic";
-            "tier" -> "Tier Access"; else -> "Farewell KM" }
+            "tier" -> "Tier Access"; "memory" -> "Memory"; else -> "Farewell KM" }
 
     LaunchedEffect(Unit) {
         mainVm.setAppContext(appCtx)

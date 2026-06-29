@@ -334,21 +334,21 @@ pub fn verify_feature(feature: &str) -> CheckResult {
             if p("/sys/module/adreno_idler/parameters/adreno_idler_active") {
                 CheckResult::pass(feature)
             } else {
-                CheckResult::pass(&format!("{}: kernel may not have adreno_idler", feature))
+                CheckResult::pass(&format!("{}: not available on this kernel", feature))
             }
         }
         "set_simple_gpu" => {
             if p("/sys/module/simple_gpu_algorithm/parameters/simple_gpu_activate") {
                 CheckResult::pass(feature) 
             } else {
-                CheckResult::pass(&format!("{}: kernel may not have simple_gpu", feature))
+                CheckResult::pass(&format!("{}: not available on this kernel", feature))
             }
         }
         "set_bus_dcvs" => {
             if p("/sys/devices/system/cpu/bus_dcvs") {
                 CheckResult::pass(feature)
             } else {
-                CheckResult::pass(&format!("{}: SOC may not support bus DCVS", feature))
+                CheckResult::pass(&format!("{}: not available on this kernel", feature))
             }
         }
         "set_renderer_global" => {
@@ -382,21 +382,21 @@ pub fn verify_feature(feature: &str) -> CheckResult {
             if p("/sys/module/msm_thermal/parameters/enabled") || p("/sys/module/msm_thermal_v2/parameters/enabled") {
                 CheckResult::pass(feature)
             } else {
-                CheckResult::pass(&format!("{}: no MSM thermal module", feature))
+                CheckResult::pass(&format!("{}: not available on this kernel", feature))
             }
         }
         "set_eara_thermal" => {
             if p("/sys/kernel/eara_thermal/enable") {
                 CheckResult::pass(feature)
             } else {
-                CheckResult::pass(&format!("{}: no EARA thermal", feature))
+                CheckResult::pass(&format!("{}: not available on this kernel", feature))
             }
         }
         "set_fpsgo" => {
             if p("/sys/kernel/fpsgo/common/fpsgo_enable") {
                 CheckResult::pass(feature)
             } else {
-                CheckResult::pass(&format!("{}: no FPSGO", feature))
+                CheckResult::pass(&format!("{}: not available on this kernel", feature))
             }
         }
         "set_thermal_sconfig" => {
@@ -496,21 +496,21 @@ pub fn verify_feature(feature: &str) -> CheckResult {
             if paths.iter().any(|p| Path::new(p).exists()) {
                 CheckResult::pass(feature)
             } else {
-                CheckResult::pass(&format!("{}: kernel may not support DT2W", feature))
+                CheckResult::pass(&format!("{}: not available on this kernel", feature))
             }
         }
         "set_kcal" => {
             if p("/sys/devices/platform/kcal_ctrl.0/kcal") {
                 CheckResult::pass(&format!("{}: rgb={}", feature, read_val("/sys/devices/platform/kcal_ctrl.0/kcal")))
             } else {
-                CheckResult::pass(&format!("{}: no KCAL (device may use MIPI)", feature))
+                CheckResult::pass(&format!("{}: not available on this kernel", feature))
             }
         }
         "set_sound_controls" => {
             if p("/sys/kernel/sound_control_3") || p("/sys/kernel/sound_control") {
                 CheckResult::pass(feature)
             } else {
-                CheckResult::pass(&format!("{}: no sound control module", feature))
+                CheckResult::pass(&format!("{}: not available on this kernel", feature))
             }
         }
         "set_dnd" => {

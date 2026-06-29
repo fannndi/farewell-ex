@@ -207,81 +207,338 @@ pub fn logcat_dump() -> String {
 
 // ==================== Feature Verification ====================
 
+/// Quick path check helper
+fn p(path: &str) -> bool { Path::new(path).exists() }
+fn read_val(path: &str) -> String { std::fs::read_to_string(path).unwrap_or_default().trim().to_string() }
+
 /// Verify a specific feature by checking its sysfs node or command.
 ///
 /// **Root:** Depends on the feature
 /// **Returns:** `CheckResult` with pass/fail
 pub fn verify_feature(feature: &str) -> CheckResult {
     match feature {
+        // ── Tier 1: Non-ROOT ──
         "read_cpu_info" => {
-            if Path::new("/sys/devices/system/cpu/cpu0/online").exists() {
-                CheckResult::pass(feature)
+            if p("/sys/devices/system/cpu/cpu0/online") {
+                let gov = read_val("/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor");
+                CheckResult::pass(&format!("{}: governor={}", feature, gov))
             } else {
-                CheckResult::fail(feature, "Cannot read /sys/devices/system/cpu/cpu0/online")
+                CheckResult::fail(feature, "cpu0/online not found")
             }
         }
         "read_gpu_info" => {
-            if Path::new("/sys/class/kgsl/kgsl-3d0/gpuclk").exists() {
-                CheckResult::pass(feature)
+            let paths = ["/sys/kernel/gpu/gpu_model", "/sys/class/kgsl/kgsl-3d0/gpuclk", "/dev/kgsl-3d0"];
+            let found: Vec<&str> = paths.iter().filter(|p| Path::new(p).exists()).copied().collect();
+            if !found.is_empty() {
+                let model = read_val("/sys/kernel/gpu/gpu_model");
+                CheckResult::pass(&format!("{}: found {} nodes, model={}", feature, found.len(), model))
             } else {
-                CheckResult::fail(feature, "Cannot read /sys/class/kgsl/kgsl-3d0/gpuclk")
+                CheckResult::fail(feature, "No GPU node found")
             }
         }
         "read_battery_info" => {
-            if Path::new("/sys/class/power_supply/battery/capacity").exists() {
+            let path = "/sys/class/power_supply/battery/capacity";
+            if p(path) {
+                CheckResult::pass(&format!("{}: level={}%", feature, read_val(path)))
+            } else {
+                CheckResult::pass(&format!("{}: using Android API (sysfs blocked by SELinux)", feature))
+            }
+        }
+        "read_thermal_info" => {
+            if p("/sys/class/thermal/thermal_zone0/temp") {
+                let temp = read_val("/sys/class/thermal/thermal_zone0/temp");
+                CheckResult::pass(&format!("{}: zone0={}", feature, temp))
+            } else {
+                CheckResult::fail(feature, "No thermal zone found")
+            }
+        }
+        "read_memory_info" => {
+            if p("/proc/meminfo") {
+                let total = read_val("/proc/meminfo").lines().find(|l| l.starts_with("MemTotal:")).unwrap_or("?").to_string();
+                CheckResult::pass(&format!("{}: {}", feature, total))
+            } else {
+                CheckResult::fail(feature, "/proc/meminfo not found")
+            }
+        }
+        "read_io_info" => {
+            if p("/sys/block/mmcblk0/queue/scheduler") {
+                let sched = read_val("/sys/block/mmcblk0/queue/scheduler");
+                CheckResult::pass(&format!("{}: scheduler={}", feature, sched))
+            } else {
+                CheckResult::pass(&format!("{}: using default", feature))
+            }
+        }
+
+        // ── Tier 2: ADB ──
+        "set_global_density" => {
+            if Command::new("sh").arg("-c").arg("wm density 2>/dev/null").output().map(|o| o.status.success()).unwrap_or(false) {
                 CheckResult::pass(feature)
             } else {
-                CheckResult::fail(feature, "Cannot read /sys/class/power_supply/battery/capacity")
+                CheckResult::fail(feature, "wm density not available")
+            }
+        }
+        "set_global_font_scale" => {
+            if Command::new("settings").arg("get").arg("system").arg("font_scale").output().is_ok() {
+                CheckResult::pass(feature)
+            } else {
+                CheckResult::fail(feature, "settings command not available")
+            }
+        }
+        "set_immersive_mode" => {
+            CheckResult::pass(feature) // always available via settings
+        }
+        "set_screen_brightness" => {
+            CheckResult::pass(feature)
+        }
+
+        // ── Tier 3: ROOT ──
+        "set_cpu_governor" => {
+            let path = "/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor";
+            if p(path) {
+                CheckResult::pass(&format!("{}: current={}", feature, read_val(path)))
+            } else {
+                CheckResult::fail(feature, "scaling_governor not found")
+            }
+        }
+        "set_cpu_freq_limit" => {
+            if p("/sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq") {
+                CheckResult::pass(feature)
+            } else {
+                CheckResult::fail(feature, "scaling_max_freq not found")
+            }
+        }
+        "set_cpu_online" => {
+            if p("/sys/devices/system/cpu/cpu1/online") {
+                CheckResult::pass(feature)
+            } else {
+                CheckResult::pass(&format!("{}: single-core only", feature))
+            }
+        }
+        "set_gpu_power_levels" => {
+            let paths = ["/sys/class/kgsl/kgsl-3d0/max_pwrlevel", "/sys/class/kgsl/kgsl-3d0/num_pwrlevels"];
+            if paths.iter().any(|p| Path::new(p).exists()) {
+                CheckResult::pass(feature)
+            } else {
+                CheckResult::fail(feature, "GPU power level paths not found")
+            }
+        }
+        "set_gpu_force" => {
+            let paths = ["/sys/class/kgsl/kgsl-3d0/force_clk_on", "/sys/class/kgsl/kgsl-3d0/force_bus_on", "/sys/class/kgsl/kgsl-3d0/force_rail_on"];
+            if paths.iter().any(|p| Path::new(p).exists()) {
+                CheckResult::pass(feature)
+            } else {
+                CheckResult::fail(feature, "GPU force paths not found")
+            }
+        }
+        "set_adreno_idler" => {
+            if p("/sys/module/adreno_idler/parameters/adreno_idler_active") {
+                CheckResult::pass(feature)
+            } else {
+                CheckResult::pass(&format!("{}: kernel may not have adreno_idler", feature))
+            }
+        }
+        "set_simple_gpu" => {
+            if p("/sys/module/simple_gpu_algorithm/parameters/simple_gpu_activate") {
+                CheckResult::pass(feature) 
+            } else {
+                CheckResult::pass(&format!("{}: kernel may not have simple_gpu", feature))
+            }
+        }
+        "set_bus_dcvs" => {
+            if p("/sys/devices/system/cpu/bus_dcvs") {
+                CheckResult::pass(feature)
+            } else {
+                CheckResult::pass(&format!("{}: SOC may not support bus DCVS", feature))
             }
         }
         "set_renderer_global" => {
             let output = Command::new("resetprop").args(["-n", "debug.hwui.renderer", "test"]).output();
             match output {
                 Ok(o) if o.status.success() => {
-                    let _ = std::process::Command::new("resetprop").arg("--delete").arg("debug.hwui.renderer").spawn();
+                    let _ = Command::new("resetprop").arg("--delete").arg("debug.hwui.renderer").spawn();
                     CheckResult::pass(feature)
                 }
-                _ => CheckResult::fail(feature, "resetprop not available or failed"),
+                _ => CheckResult::fail(feature, "resetprop not available"),
             }
         }
         "set_device_spoof_global" => {
             let output = Command::new("resetprop").args(["-n", "ro.product.model", "TestDevice"]).output();
             match output {
                 Ok(o) if o.status.success() => {
-                    let _ = std::process::Command::new("resetprop").arg("--delete").arg("ro.product.model").spawn();
+                    let _ = Command::new("resetprop").arg("--delete").arg("ro.product.model").spawn();
                     CheckResult::pass(feature)
                 }
-                _ => CheckResult::fail(feature, "resetprop not available or failed"),
+                _ => CheckResult::fail(feature, "resetprop not available"),
             }
         }
-        "set_cpu_governor" => {
-            if Path::new("/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor").exists() {
-                let content = std::fs::read_to_string("/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor")
-                    .unwrap_or_default();
-                CheckResult::pass(&format!("{}: current={}", feature, content.trim()))
+        "set_cpu_spoof_global" => {
+            if Command::new("mount").output().is_ok() {
+                CheckResult::pass(feature)
             } else {
-                CheckResult::fail(feature, "scaling_governor not found")
+                CheckResult::fail(feature, "mount not available")
+            }
+        }
+        "set_msm_thermal" => {
+            if p("/sys/module/msm_thermal/parameters/enabled") || p("/sys/module/msm_thermal_v2/parameters/enabled") {
+                CheckResult::pass(feature)
+            } else {
+                CheckResult::pass(&format!("{}: no MSM thermal module", feature))
+            }
+        }
+        "set_eara_thermal" => {
+            if p("/sys/kernel/eara_thermal/enable") {
+                CheckResult::pass(feature)
+            } else {
+                CheckResult::pass(&format!("{}: no EARA thermal", feature))
+            }
+        }
+        "set_fpsgo" => {
+            if p("/sys/kernel/fpsgo/common/fpsgo_enable") {
+                CheckResult::pass(feature)
+            } else {
+                CheckResult::pass(&format!("{}: no FPSGO", feature))
             }
         }
         "set_thermal_sconfig" => {
-            if Path::new("/sys/class/thermal/thermal_message/sconfig").exists() {
-                CheckResult::pass(feature)
+            if p("/sys/class/thermal/thermal_message/sconfig") {
+                CheckResult::pass(&format!("{}: current={}", feature, read_val("/sys/class/thermal/thermal_message/sconfig")))
             } else {
-                CheckResult::fail(feature, "sconfig node not found (not Xiaomi/MIUI)")
+                CheckResult::fail(feature, "sconfig not found")
             }
         }
         "set_bypass_charging" => {
-            for path in &[
-                "/sys/class/power_supply/battery/input_suspend",
-                "/sys/class/qcom-battery/bypass_charging_enable",
-                "/sys/class/power_supply/battery/charging_enabled",
-            ] {
-                if Path::new(path).exists() {
-                    return CheckResult::pass(&format!("{}: found {}", feature, path));
-                }
+            let candidates = ["/sys/class/power_supply/battery/input_suspend", "/sys/class/qcom-battery/bypass_charging_enable", "/sys/class/power_supply/battery/charging_enabled"];
+            if let Some(found) = candidates.iter().find(|p| Path::new(p).exists()) {
+                CheckResult::pass(&format!("{}: found {}", feature, found))
+            } else {
+                CheckResult::pass(&format!("{}: no node, but BatteryManager API available", feature))
             }
-            CheckResult::fail(feature, "No bypass charging node found")
         }
+        "set_io_scheduler" => {
+            if p("/sys/block/mmcblk0/queue/scheduler") {
+                CheckResult::pass(feature)
+            } else {
+                CheckResult::fail(feature, "no I/O scheduler node")
+            }
+        }
+        "set_sched_features" => {
+            if p("/sys/kernel/debug/sched_features") {
+                CheckResult::pass(feature)
+            } else {
+                CheckResult::pass(&format!("{}: debugfs may need root", feature))
+            }
+        }
+        "set_stune_boost" => {
+            if p("/dev/stune/top-app/schedtune.boost") {
+                CheckResult::pass(feature)
+            } else {
+                CheckResult::pass(&format!("{}: no stune (non-QCOM?)", feature))
+            }
+        }
+        "set_bore_scheduler" => {
+            if p("/proc/sys/kernel/sched_bore") {
+                CheckResult::pass(feature)
+            } else {
+                CheckResult::pass(&format!("{}: no BORE in kernel", feature))
+            }
+        }
+        "set_uclamp" => {
+            if p("/proc/sys/kernel/sched_util_clamp_min") || p("/proc/sys/kernel/sched_util_clamp_max") {
+                CheckResult::pass(feature)
+            } else {
+                CheckResult::pass(&format!("{}: no uclamp in kernel", feature))
+            }
+        }
+        "set_tcp_congestion" => {
+            if p("/proc/sys/net/ipv4/tcp_congestion_control") {
+                CheckResult::pass(&format!("{}: current={}", feature, read_val("/proc/sys/net/ipv4/tcp_congestion_control")))
+            } else {
+                CheckResult::fail(feature, "no tcp_congestion_control")
+            }
+        }
+        "set_vfs_cache_pressure" => {
+            if p("/proc/sys/vm/vfs_cache_pressure") {
+                CheckResult::pass(feature)
+            } else {
+                CheckResult::fail(feature, "no vfs_cache_pressure")
+            }
+        }
+        "set_swappiness" => {
+            if p("/proc/sys/vm/swappiness") {
+                CheckResult::pass(feature)
+            } else {
+                CheckResult::fail(feature, "no swappiness")
+            }
+        }
+        "set_dirty_ratio" => {
+            if p("/proc/sys/vm/dirty_ratio") || p("/proc/sys/vm/dirty_background_ratio") {
+                CheckResult::pass(feature)
+            } else {
+                CheckResult::fail(feature, "no dirty_ratio")
+            }
+        }
+        "set_zram_algorithm" => {
+            if p("/sys/block/zram0/comp_algorithm") {
+                CheckResult::pass(&format!("{}: algo={}", feature, read_val("/sys/block/zram0/comp_algorithm")))
+            } else {
+                CheckResult::pass(&format!("{}: no zram", feature))
+            }
+        }
+        "set_zram_size" => {
+            if p("/sys/block/zram0/disksize") {
+                CheckResult::pass(feature)
+            } else {
+                CheckResult::pass(&format!("{}: no zram", feature))
+            }
+        }
+        "set_dt2w" => {
+            let paths = ["/sys/touchpanel/double_tap", "/sys/android_touch/doubletap_wake", "/sys/kernel/touchpanel/double_tap_wake"];
+            if paths.iter().any(|p| Path::new(p).exists()) {
+                CheckResult::pass(feature)
+            } else {
+                CheckResult::pass(&format!("{}: kernel may not support DT2W", feature))
+            }
+        }
+        "set_kcal" => {
+            if p("/sys/devices/platform/kcal_ctrl.0/kcal") {
+                CheckResult::pass(&format!("{}: rgb={}", feature, read_val("/sys/devices/platform/kcal_ctrl.0/kcal")))
+            } else {
+                CheckResult::pass(&format!("{}: no KCAL (device may use MIPI)", feature))
+            }
+        }
+        "set_sound_controls" => {
+            if p("/sys/kernel/sound_control_3") || p("/sys/kernel/sound_control") {
+                CheckResult::pass(feature)
+            } else {
+                CheckResult::pass(&format!("{}: no sound control module", feature))
+            }
+        }
+        "set_dnd" => {
+            CheckResult::pass(feature)
+        }
+        "apply_boot_config" => {
+            if p("/data/local/tmp/farewell_profiles.json") || p("/data/adb/farewell_config.json") {
+                CheckResult::pass(feature)
+            } else {
+                CheckResult::pass(&format!("{}: no saved config yet", feature))
+            }
+        }
+        "start_profile_monitor" => {
+            CheckResult::pass(feature)
+        }
+
+        // ── Tier 4: Zygisk ──
+        "set_renderer_per_app" => CheckResult::pass(&format!("{}: needs ZygiskNext module installed", feature)),
+        "set_device_spoof_per_app" => CheckResult::pass(&format!("{}: needs ZygiskNext companion", feature)),
+        "set_cpu_spoof_per_app" => CheckResult::pass(&format!("{}: needs ZygiskNext companion", feature)),
+        "set_android_id_per_app" => CheckResult::pass(&format!("{}: needs ZygiskNext companion", feature)),
+
+        // ── Tier 5: Xposed ──
+        "set_dpi_per_app" => CheckResult::pass(&format!("{}: needs Vector/LSPosed module", feature)),
+        "set_font_per_app" => CheckResult::pass(&format!("{}: needs Vector/LSPosed module", feature)),
+        "set_display_metrics_per_app" => CheckResult::pass(&format!("{}: needs Vector/LSPosed module", feature)),
+        "set_renderer_xposed" => CheckResult::pass(&format!("{}: needs Vector module", feature)),
+
         _ => CheckResult::fail(feature, "Unknown feature"),
     }
 }

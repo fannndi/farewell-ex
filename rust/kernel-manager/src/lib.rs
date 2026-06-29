@@ -1553,3 +1553,4 @@ pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_readTpIn
 pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_readTpGestureNative(env: JNIEnv, _class: JClass) -> jstring {
     create_jstring_safe(&env, touch::read_tp_gesture())
 }
+

@@ -71,9 +71,8 @@ class MainViewModel : PollingViewModel<DashboardState>(DashboardState(), interva
         }
 
         try {
-            // CPU load via NativeLib
-            val cpuLoad = try { NativeLib.readCpuLoad() ?: 0f } catch (_: Exception) { 0f }
-            val cpuTemp = readCpuTemp()
+            val cpuLoad = CpuReader.getCpuLoad()
+            val cpuTemp = CpuReader.getCoreTemp()
 
             // GPU — model via sysfs or GL, freq/load via IOCTL or root
             val gpuFreq = readGpuFreq()
@@ -123,21 +122,6 @@ class MainViewModel : PollingViewModel<DashboardState>(DashboardState(), interva
                 )
             }
         } catch (e: Exception) { Log.e("MainViewModel", "refresh failed", e) }
-    }
-
-    private suspend fun readCpuTemp(): Float = withContext(Dispatchers.IO) {
-        for (zone in 0..9) {
-            val type = AccessManager.readFile("/sys/class/thermal/thermal_zone${zone}/type").takeIf { it.isNotEmpty() } ?: continue
-            val lower = type.lowercase()
-            if (lower.contains("cpu") || lower.contains("tsens") || lower == "pa") {
-                val raw = AccessManager.readFile("/sys/class/thermal/thermal_zone${zone}/temp")
-                val temp = raw.toFloatOrNull() ?: continue
-                return@withContext if (temp > 1000f) temp / 1000f else if (temp > 100f) temp / 10f else temp
-            }
-        }
-        val raw = AccessManager.readFile("/sys/class/thermal/thermal_zone0/temp")
-        val temp = raw.toFloatOrNull() ?: return@withContext 0f
-        if (temp > 1000f) temp / 1000f else if (temp > 100f) temp / 10f else temp
     }
 
     private suspend fun readSysfsInt(path: String): Long? {

@@ -1,14 +1,19 @@
 package com.farewell.kernelmanager.kernel
 
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+
 object CpuReader {
     private var prevTotal = 0L
     private var prevIdle = 0L
 
-    fun getCpuLoad(): Float {
-        val stat = ShellReader.read("cat", "/proc/stat") ?: return 0f
-        val first = stat.lines().firstOrNull { it.startsWith("cpu ") } ?: return 0f
+    suspend fun getCpuLoad(): Float = withContext(Dispatchers.IO) {
+        val stat = AccessManager.readFile("/proc/stat").takeIf { it.isNotEmpty() }
+            ?: ShellReader.read("cat", "/proc/stat") ?: return@withContext 0f
+
+        val first = stat.lines().firstOrNull { it.startsWith("cpu ") } ?: return@withContext 0f
         val parts = first.split("\\s+".toRegex()).drop(1)
-        if (parts.size < 4) return 0f
+        if (parts.size < 4) return@withContext 0f
         val user = parts[0].toLongOrNull() ?: 0
         val nice = parts[1].toLongOrNull() ?: 0
         val sys = parts[2].toLongOrNull() ?: 0
@@ -18,43 +23,45 @@ object CpuReader {
         val di = idle - prevIdle
         prevTotal = total
         prevIdle = idle
-        return if (dt > 0) 100f * (dt - di) / dt else 0f
+        if (dt > 0) 100f * (dt - di) / dt else 0f
     }
 
-    fun getCpuFreqs(): Map<Int, Int> {
+    suspend fun getCpuFreqs(): Map<Int, Int> = withContext(Dispatchers.IO) {
         val map = mutableMapOf<Int, Int>()
-        for (i in 0 until 12) {
-            val raw = ShellReader.read("cat", "/sys/devices/system/cpu/cpu$i/cpufreq/scaling_cur_freq")
-            val freq = raw?.trim()?.toLongOrNull() ?: 0L
+        for (i in 0 until 8) {
+            val raw = AccessManager.readFile("/sys/devices/system/cpu/cpu$i/cpufreq/scaling_cur_freq")
+            val freq = raw.trim().toLongOrNull() ?: 0L
             if (freq > 0) map[i] = (freq / 1000).toInt()
         }
-        return map
+        map
     }
 
-    fun getCpuOnline(): Map<Int, Boolean> {
+    suspend fun getCpuOnline(): Map<Int, Boolean> = withContext(Dispatchers.IO) {
         val map = mutableMapOf<Int, Boolean>()
-        map[0] = true
-        for (i in 1 until 12) {
-            val raw = ShellReader.read("cat", "/sys/devices/system/cpu/cpu$i/online")
-            map[i] = raw?.trim() == "1"
+        for (i in 0 until 8) {
+            val raw = AccessManager.readFile("/sys/devices/system/cpu/cpu$i/online")
+            map[i] = raw.trim() == "1"
         }
-        return map
+        map
     }
 
-    fun getCoreTemp(): Float {
+    suspend fun getCoreTemp(): Float = withContext(Dispatchers.IO) {
         for (zone in 0..9) {
-            val type = ShellReader.read("cat", "/sys/class/thermal/thermal_zone${zone}/type") ?: continue
-            if (type.lowercase().contains("cpu") || type.lowercase().contains("tsens") || type == "pa") {
-                val temp = ShellReader.read("cat", "/sys/class/thermal/thermal_zone${zone}/temp")?.trim()?.toFloatOrNull() ?: continue
-                return if (temp > 1000f) temp / 1000f else if (temp > 100f) temp / 10f else temp
+            val type = AccessManager.readFile("/sys/class/thermal/thermal_zone${zone}/type").takeIf { it.isNotEmpty() }
+                ?: continue
+            if (type.lowercase().contains("cpu") || type.lowercase().contains("tsens") || type == "pa" || type.contains("pm")) {
+                val raw = AccessManager.readFile("/sys/class/thermal/thermal_zone${zone}/temp")
+                val temp = raw.trim().toFloatOrNull() ?: continue
+                return@withContext if (temp > 1000f) temp / 1000f else if (temp > 100f) temp / 10f else temp
             }
         }
-        return 0f
+        0f
     }
 
-    fun getTimeInState(core: Int): Map<Int, Int> {
+    suspend fun getTimeInState(core: Int): Map<Int, Int> = withContext(Dispatchers.IO) {
         val map = mutableMapOf<Int, Int>()
-        val raw = ShellReader.read("cat", "/sys/devices/system/cpu/cpu$core/cpufreq/stats/time_in_state") ?: return map
+        val raw = AccessManager.readFile("/sys/devices/system/cpu/cpu$core/cpufreq/stats/time_in_state")
+            .takeIf { it.isNotEmpty() } ?: return@withContext map
         raw.lines().forEach { line ->
             val parts = line.split("\\s+".toRegex())
             if (parts.size >= 2) {
@@ -63,6 +70,6 @@ object CpuReader {
                 map[freq / 1000] = time
             }
         }
-        return map
+        map
     }
 }

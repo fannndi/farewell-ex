@@ -1,4 +1,5 @@
 use crate::sysfs;
+use crate::sysfs::{SysfsError, SysfsResult};
 
 /// Get max backlight brightness value.
 ///
@@ -73,6 +74,28 @@ pub fn set_backlight_dimmer_enabled(enabled: bool) -> bool {
     sysfs::chmod(path, "644");
     let ok = sysfs::write_sysfs(path, if enabled { "1" } else { "0" });
     sysfs::chmod(path, "444"); ok
+}
+
+/// Read backlight dimmer status.
+///
+/// **Sysfs path:** `/sys/devices/virtual/misc/backlightdimmer/enabled`
+/// **Root:** Not required
+/// **Returns:** `true` if dimmer is enabled, `false` otherwise
+pub fn get_backlight_dimmer() -> bool {
+    let path = "/sys/devices/virtual/misc/backlightdimmer/enabled";
+    sysfs::read_sysfs(path).map_or(false, |v| v.trim() == "1")
+}
+
+/// Enable/disable KCAL color control.
+///
+/// **Sysfs path:** `/sys/devices/platform/kcal_ctrl.0/kcal_enable`
+/// **Root:** Required
+/// **Returns:** `SysfsResult<bool>`
+pub fn set_kcal_enable(enabled: bool) -> SysfsResult<bool> {
+    let path = "/sys/devices/platform/kcal_ctrl.0/kcal_enable";
+    let _ = sysfs::chmod(path, "644");
+    if sysfs::write_sysfs(path, if enabled { "1" } else { "0" }) { Ok(true) }
+    else { Err(SysfsError::IoError(path.into())) }
 }
 
 #[cfg(test)]

@@ -49,4 +49,39 @@ object BatteryAndroidReader {
         BatteryManager.BATTERY_HEALTH_COLD -> "Cold"
         else -> "Unknown"
     }
+
+    fun getTechnology(context: Context): String {
+        val i = context.registerReceiver(null, filter)
+        return i?.getStringExtra(BatteryManager.EXTRA_TECHNOLOGY) ?: "Unknown"
+    }
+
+    fun getCycleCount(): Int {
+        try {
+            for (path in listOf(
+                "/sys/class/power_supply/bms/cycle_count",
+                "/sys/class/power_supply/battery/cycle_count",
+                "/sys/class/power_supply/battery/battery_cycle_count"
+            )) {
+                val v = ShellReader.read("cat", path)?.trim()?.toIntOrNull()
+                if (v != null && v >= 0) return v
+            }
+        } catch (_: Exception) {}
+        return -1
+    }
+
+    fun isDualCell(): Boolean {
+        return ShellReader.exists("/sys/class/power_supply/battery/cell1_volt")
+    }
+
+    fun hasSwap(): Boolean = try {
+        ShellReader.read("cat", "/proc/swaps")?.contains("zram", ignoreCase = true) == true
+    } catch (_: Exception) { false }
+
+    fun getChargeFull(): Int = try {
+        ShellReader.read("cat", "/sys/class/power_supply/battery/charge_full")?.trim()?.toIntOrNull() ?: 0
+    } catch (_: Exception) { 0 }
+
+    fun getChargeFullDesign(): Int = try {
+        ShellReader.read("cat", "/sys/class/power_supply/battery/charge_full_design")?.trim()?.toIntOrNull() ?: 0
+    } catch (_: Exception) { 0 }
 }

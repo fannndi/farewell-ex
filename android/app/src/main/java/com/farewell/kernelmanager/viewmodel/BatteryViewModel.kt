@@ -2,6 +2,7 @@ package com.farewell.kernelmanager.viewmodel
 
 import android.util.Log
 import com.farewell.kernelmanager.kernel.NativeLib
+import com.farewell.kernelmanager.kernel.SysfsReader
 
 data class BatteryState(
     val level: Int = 0, val temp: Float = 0f, val voltage: Float = 0f,
@@ -17,20 +18,19 @@ data class BatteryState(
 class BatteryViewModel : PollingViewModel<BatteryState>(BatteryState(), intervalMs = 3000) {
 
     override suspend fun refresh() {
-        if (!NativeLib.isAvailable()) return
         try {
-            val level = NativeLib.readBatteryLevel() ?: 0
-            val temp = NativeLib.readBatteryTemp() ?: 0f
-            val voltage = NativeLib.readBatteryVoltage() ?: 0f
+            val level = SysfsReader.readBatteryLevel()
+            val temp = SysfsReader.readBatteryTemp()
+            val voltage = SysfsReader.readBatteryVoltage()
+            val charging = SysfsReader.isCharging()
             val current = NativeLib.readBatteryCurrent() ?: 0
-            val isCharging = NativeLib.isCharging() ?: false
             val health = NativeLib.readBatteryHealth() ?: "Unknown"
             val cycle = NativeLib.readCycleCount() ?: -1
             val capLevel = NativeLib.readBatteryCapacityLevel() ?: 100f
-            val chargeMax = NativeLib.getConstantChargeCurrentMaxNative()
-            val usbMax = NativeLib.getUsbCurrentMaxNative()
+            val chargeMax = if (NativeLib.isAvailable()) NativeLib.getConstantChargeCurrentMaxNative() else 0
+            val usbMax = if (NativeLib.isAvailable()) NativeLib.getUsbCurrentMaxNative() else 0
             updateState {
-                BatteryState(level, temp, voltage, current, isCharging, health, cycle, capLevel,
+                BatteryState(level, temp, voltage, current, charging, health, cycle, capLevel,
                     "Unknown", it.bypassEnabled, chargeMax, usbMax, false)
             }
         } catch (e: Exception) { Log.e("BatteryViewModel", "refresh failed", e) }

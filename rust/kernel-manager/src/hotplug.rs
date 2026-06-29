@@ -208,9 +208,7 @@ pub fn get_available_hotplug_drivers() -> Vec<String> {
     if get_core_ctl_min_cpus(0) >= 0 { drivers.push("core_ctl".to_string()); }
     if sysfs::file_exists("/sys/module/msm_hotplug/parameters/enabled") { drivers.push("msm_hotplug".to_string()); }
     if sysfs::file_exists("/sys/kernel/msm_mpdecision/conf/enabled") { drivers.push("mpdecision".to_string()); }
-    if sysfs::file_exists("/sys/module/intelliplug/parameters/intelliplug_active") { drivers.push("intelliplug".to_string()); }
-    if sysfs::file_exists("/sys/kernel/alucard_hotplug/hotplug_enable") { drivers.push("alucard".to_string()); }
-    if sysfs::file_exists("/sys/module/autosmp/parameters/enabled") { drivers.push("autosmp".to_string()); }
+    // ponytail: non-QC removed for SM6150 focus (intelliplug, alucard, autosmp)
     drivers
 }
 
@@ -264,7 +262,6 @@ mod tests {
     #[test]
     fn test_mpdecision_paths() {
         assert_eq!("/sys/kernel/msm_mpdecision/conf/enabled", "/sys/kernel/msm_mpdecision/conf/enabled");
-        assert_eq!("/sys/kernel/alucard_hotplug/hotplug_enable", "/sys/kernel/alucard_hotplug/hotplug_enable");
     }
 
     #[test]

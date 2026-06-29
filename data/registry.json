@@ -1,0 +1,15 @@
+{
+  "projects": {
+    "farewell-ex": {
+      "context_file": "farewell-ex.md",
+      "path": "C:\\\\Users\\\\FANNNDI\\\\Documents\\\\farewell-ex",
+      "type": "rust+kotlin",
+      "dominan": "ANDROID+RUST",
+      "is_local": true,
+      "last_used": "2026-06-22",
+      "project_code": "001"
+    }
+  },
+  "active": "farewell-ex",
+  "_next_code": "002"
+}

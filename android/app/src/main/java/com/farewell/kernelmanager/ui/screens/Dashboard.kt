@@ -58,8 +58,13 @@ fun HomeScreen(
             Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text("Device Info", fontWeight = FontWeight.Bold)
                 Text("Model: ${mainState.deviceModel}", style = MaterialTheme.typography.bodySmall)
+                Text("Name: ${mainState.deviceName}", style = MaterialTheme.typography.bodySmall)
                 Text("SoC: ${mainState.soc}", style = MaterialTheme.typography.bodySmall)
+                Text("GPU: ${mainState.gpuModel} (${mainState.gpuGmem}MB)", style = MaterialTheme.typography.bodySmall)
                 Text("Android: ${mainState.androidVersion}", style = MaterialTheme.typography.bodySmall)
+                Text("ABI: ${mainState.abis}", style = MaterialTheme.typography.bodySmall)
+                Text("Panel: ${mainState.panelName}", style = MaterialTheme.typography.bodySmall)
+                Text("Battery: ${mainState.batteryTech} ${mainState.batteryCycleCount}cyc ${mainState.batteryStatus}/${mainState.batteryHealth}", style = MaterialTheme.typography.bodySmall)
             }
         }
 

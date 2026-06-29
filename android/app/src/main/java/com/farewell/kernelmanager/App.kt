@@ -1,6 +1,7 @@
 package com.farewell.kernelmanager
 
 import android.app.Application
+import com.farewell.kernelmanager.kernel.SysfsReader
 import com.topjohnwu.superuser.Shell
 
 class App : Application() {
@@ -12,5 +13,6 @@ class App : Application() {
                 .setTimeout(10)
                 .setFlags(Shell.FLAG_MOUNT_MASTER or Shell.FLAG_REDIRECT_STDERR)
         )
+        SysfsReader.init(this)
     }
 }

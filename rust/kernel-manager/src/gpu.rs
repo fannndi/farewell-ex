@@ -454,20 +454,27 @@ const KGSL_PROP_GPUCLK: u32 = 6;
 const KGSL_PROP_BUSY_CYCLES: u32 = 2;
 const KGSL_PROP_VERSION_INFO: u32 = 1;
 
-// _IOWR('k', 0x09, sizeof(...)) = (3<<30) | (sizeof<<16) | ('k'<<8) | 0x09
-// sizeof(KgslGetProperty64) = 4+8+4 = 16 → 0xC0106B09
-// sizeof(KgslGetProperty32) = 4+4+4 = 12 → 0xC00C6B09
-const KGSL_IOCTL_GETPROP_64: i32 = -1071586551; // 0xC0106B09
-const KGSL_IOCTL_GETPROP_32: i32 = -1073211639; // 0xC00C6B09
-
 #[repr(C)]
 struct KgslGetProperty64 { prop_type: u32, value: *mut libc::c_void, size: u32 }
 #[repr(C)]
 struct KgslGetProperty32 { prop_type: u32, value: i32, size: u32 }
 
+// _IOWR('k', 0x09, sizeof(...)) = (3<<30) | (sizeof<<16) | ('k'<<8) | 0x09
+const KGSL_IOCTL_GETPROP_64: i32 = {
+    let s = std::mem::size_of::<KgslGetProperty64>() as i32;
+    (3 << 30) | (s << 16) | (0x6B << 8) | 0x09
+};
+const KGSL_IOCTL_GETPROP_32: i32 = {
+    let s = std::mem::size_of::<KgslGetProperty32>() as i32;
+    (3 << 30) | (s << 16) | (0x6B << 8) | 0x09
+};
+
 /// Open KGSL device node. Returns fd or -1.
 fn kgsl_open() -> i32 {
-    unsafe { libc::open(KGSL_DEV.as_ptr() as *const libc::c_char, libc::O_RDWR) }
+    let fd = unsafe { libc::open(KGSL_DEV.as_ptr() as *const libc::c_char, libc::O_RDWR) };
+    if fd >= 0 { return fd; }
+    eprintln!("ioctl: O_RDWR failed, trying O_RDONLY");
+    unsafe { libc::open(KGSL_DEV.as_ptr() as *const libc::c_char, libc::O_RDONLY) }
 }
 
 /// Read KGSL property via ioctl (tries 64-bit then 32-bit encoding).
@@ -495,12 +502,13 @@ fn kgsl_getprop(fd: i32, prop_type: u32, buf: &mut [u8]) -> i32 {
 /// **Root:** Not required (SELinux allows device node ioctl)
 pub fn read_gpu_freq_ioctl() -> i32 {
     let fd = kgsl_open();
-    if fd < 0 { return 0; }
+    if fd < 0 { eprintln!("ioctl: kgsl_open failed (SELinux?)"); return 0; }
     let mut buf = [0u8; 8];
     let ret = kgsl_getprop(fd, KGSL_PROP_GPUCLK, &mut buf);
     unsafe { libc::close(fd); }
-    if ret < 0 { return 0; }
+    if ret < 0 { eprintln!("ioctl: KGSL_PROP_GPUCLK failed ret={}", ret); return 0; }
     let val = u32::from_ne_bytes([buf[0], buf[1], buf[2], buf[3]]);
+    eprintln!("ioctl: KGSL_PROP_GPUCLK raw_val={}", val);
     if val > 1_000_000 { (val / 1_000_000) as i32 }
     else if val > 1000 { (val / 1000) as i32 }
     else { val as i32 }

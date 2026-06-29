@@ -1,9 +1,14 @@
 mod sysfs;
+mod sysctl_qcom;
 mod cpu;
 mod gpu;
 mod memory;
 mod thermal;
 mod power;
+mod power_xiaomi;
+mod display_xiaomi;
+mod haptic;
+mod boot_qcom;
 mod scheduler;
 mod io;
 mod network;
@@ -17,6 +22,8 @@ mod tier;
 mod checker;
 mod hotplug;
 mod disk;
+mod stune;
+mod touch;
 
 use jni::objects::{JClass, JString};
 use jni::sys::{jfloat, jint, jlong, jstring};
@@ -972,4 +979,577 @@ pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_runDebug
 #[unsafe(no_mangle)]
 pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_readDebugLogNative(env: JNIEnv, _class: JClass) -> jstring {
     create_jstring_safe(&env, checker::read_debug_log())
+}
+
+// ==================== XIAOMI CHARGING (power_xiaomi) ====================
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_hasReverseChargeNative(_env: JNIEnv, _class: JClass) -> jint {
+    if power_xiaomi::has_reverse_charge() { 1 } else { 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setReverseChargeNative(_env: JNIEnv, _class: JClass, enable: jint) -> jint {
+    match power_xiaomi::set_reverse_charge(enable != 0) { Ok(true) => 1, _ => 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_getReverseChargeNative(env: JNIEnv, _class: JClass) -> jstring {
+    create_jstring_safe(&env, power_xiaomi::get_reverse_charge())
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_hasNightChargingNative(_env: JNIEnv, _class: JClass) -> jint {
+    if power_xiaomi::has_night_charging() { 1 } else { 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setNightChargingNative(_env: JNIEnv, _class: JClass, enable: jint) -> jint {
+    match power_xiaomi::set_night_charging(enable != 0) { Ok(true) => 1, _ => 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_getNightChargingNative(env: JNIEnv, _class: JClass) -> jstring {
+    create_jstring_safe(&env, power_xiaomi::get_night_charging())
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_hasCoolModeNative(_env: JNIEnv, _class: JClass) -> jint {
+    if power_xiaomi::has_cool_mode() { 1 } else { 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setCoolModeNative(_env: JNIEnv, _class: JClass, enable: jint) -> jint {
+    match power_xiaomi::set_cool_mode(enable != 0) { Ok(true) => 1, _ => 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_getCoolModeNative(env: JNIEnv, _class: JClass) -> jstring {
+    create_jstring_safe(&env, power_xiaomi::get_cool_mode())
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_hasSmartBatteryNative(_env: JNIEnv, _class: JClass) -> jint {
+    if power_xiaomi::has_smart_battery() { 1 } else { 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setSmartBatteryNative(_env: JNIEnv, _class: JClass, enable: jint) -> jint {
+    match power_xiaomi::set_smart_battery(enable != 0) { Ok(true) => 1, _ => 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_getSmartBatteryNative(env: JNIEnv, _class: JClass) -> jstring {
+    create_jstring_safe(&env, power_xiaomi::get_smart_battery())
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_hasInputSuspendNative(_env: JNIEnv, _class: JClass) -> jint {
+    if power_xiaomi::has_input_suspend() { 1 } else { 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setInputSuspendNative(_env: JNIEnv, _class: JClass, suspend: jint) -> jint {
+    match power_xiaomi::set_input_suspend(suspend != 0) { Ok(true) => 1, _ => 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_getUsbpdStatusNative(env: JNIEnv, _class: JClass) -> jstring {
+    let status = power_xiaomi::get_usbpd_status();
+    let json: String = status.iter().map(|(k,v)| format!("\"{}\":\"{}\"", k, v)).collect::<Vec<_>>().join(",");
+    create_jstring_safe(&env, format!("{{{}}}", json))
+}
+
+// ==================== XIAOMI DISPLAY (display_xiaomi) ====================
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_hasKcalNative(_env: JNIEnv, _class: JClass) -> jint {
+    if display_xiaomi::has_kcal() { 1 } else { 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setKcalRgbNative(_env: JNIEnv, _class: JClass, r: jint, g: jint, b: jint) -> jint {
+    match display_xiaomi::set_kcal_rgb(r, g, b) { Ok(true) => 1, _ => 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_getKcalValuesNative(env: JNIEnv, _class: JClass) -> jstring {
+    create_jstring_safe(&env, display_xiaomi::get_kcal_values())
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setKcalContrastNative(_env: JNIEnv, _class: JClass, val: jint) -> jint {
+    match display_xiaomi::set_kcal_contrast(val) { Ok(true) => 1, _ => 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setKcalSaturationNative(_env: JNIEnv, _class: JClass, val: jint) -> jint {
+    match display_xiaomi::set_kcal_saturation(val) { Ok(true) => 1, _ => 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_hasDfpsNative(_env: JNIEnv, _class: JClass) -> jint {
+    if display_xiaomi::has_dfps() { 1 } else { 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setDfpsNative(_env: JNIEnv, _class: JClass, mode: jint) -> jint {
+    match display_xiaomi::set_dfps(mode) { Ok(true) => 1, _ => 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_getDfpsModeNative(_env: JNIEnv, _class: JClass) -> jint {
+    display_xiaomi::get_dfps_mode()
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_hasHistogramNative(_env: JNIEnv, _class: JClass) -> jint {
+    if display_xiaomi::has_histogram() { 1 } else { 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setHistogramNative(_env: JNIEnv, _class: JClass, enable: jint) -> jint {
+    match display_xiaomi::set_histogram(enable != 0) { Ok(true) => 1, _ => 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_hasMipiRegNative(_env: JNIEnv, _class: JClass) -> jint {
+    if display_xiaomi::has_mipi_reg() { 1 } else { 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_readMipiRegNative(env: JNIEnv, _class: JClass) -> jstring {
+    create_jstring_safe(&env, display_xiaomi::read_mipi_reg())
+}
+
+// ==================== HAPTIC (AW8697) ====================
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_hasAw8697Native(_env: JNIEnv, _class: JClass) -> jint {
+    if haptic::has_aw8697() { 1 } else { 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_hasLraCalibrationNative(_env: JNIEnv, _class: JClass) -> jint {
+    if haptic::has_lra_calibration() { 1 } else { 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_readLraCalibrationNative(env: JNIEnv, _class: JClass) -> jstring {
+    create_jstring_safe(&env, haptic::read_lra_calibration())
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_readAw8697F0Native(mut env: JNIEnv, _class: JClass, bus_addr: JString) -> jstring {
+    let b: String = env.get_string(&bus_addr).map(|s| s.into()).unwrap_or_default();
+    create_jstring_safe(&env, haptic::read_aw8697_f0(&b))
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_hasCustomWaveNative(_env: JNIEnv, _class: JClass) -> jint {
+    if haptic::has_custom_wave() { 1 } else { 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_writeCustomWaveNative(mut env: JNIEnv, _class: JClass, bus_addr: JString, data: JString) -> jint {
+    let b: String = env.get_string(&bus_addr).map(|s| s.into()).unwrap_or_default();
+    let d: String = env.get_string(&data).map(|s| s.into()).unwrap_or_default();
+    match haptic::write_custom_wave(&b, &d) { Ok(true) => 1, _ => 0 }
+}
+
+// ==================== BOOT QCOM ====================
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_getBootStatusJsonNative(env: JNIEnv, _class: JClass) -> jstring {
+    create_jstring_safe(&env, boot_qcom::get_boot_status_json())
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_hasUfsClkscaleNative(_env: JNIEnv, _class: JClass) -> jint {
+    if boot_qcom::has_ufs_clkscale() { 1 } else { 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setUfsClkscaleNative(_env: JNIEnv, _class: JClass, enable: jint) -> jint {
+    match boot_qcom::set_ufs_clkscale(enable != 0) { Ok(true) => 1, _ => 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_getUfsClkscaleNative(env: JNIEnv, _class: JClass) -> jstring {
+    create_jstring_safe(&env, boot_qcom::get_ufs_clkscale())
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_getSubsysConfigJsonNative(env: JNIEnv, _class: JClass) -> jstring {
+    create_jstring_safe(&env, boot_qcom::get_subsys_config_json())
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_hasUsbIclNative(_env: JNIEnv, _class: JClass) -> jint {
+    if boot_qcom::has_usb_icl() { 1 } else { 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setUsbIclNative(_env: JNIEnv, _class: JClass, active: jint, val_ma: jint) -> jint {
+    match boot_qcom::set_usb_icl(active != 0, val_ma) { Ok(true) => 1, _ => 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_getUsbIclNative(env: JNIEnv, _class: JClass) -> jstring {
+    create_jstring_safe(&env, boot_qcom::get_usb_icl())
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_getPilTimeoutsJsonNative(env: JNIEnv, _class: JClass) -> jstring {
+    create_jstring_safe(&env, boot_qcom::get_pil_timeouts_json())
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_hasDloadNative(_env: JNIEnv, _class: JClass) -> jint {
+    if boot_qcom::has_dload() { 1 } else { 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setDloadNative(_env: JNIEnv, _class: JClass, enable: jint) -> jint {
+    match boot_qcom::set_dload(enable != 0) { Ok(true) => 1, _ => 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_shutdownWlanNative(_env: JNIEnv, _class: JClass) -> jint {
+    match boot_qcom::shutdown_wlan() { Ok(true) => 1, _ => 0 }
+}
+
+// ==================== SCHEDULER MISSING JNI BINDINGS ====================
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_getSchedFeaturesNative(mut env: JNIEnv, _class: JClass) -> jstring {
+    create_jstring_safe(&env, scheduler::get_sched_features())
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setSchedFeatureNative(mut env: JNIEnv, _class: JClass, feature: JString, enabled: jint) -> jint {
+    let f: String = env.get_string(&feature).map(|s| s.into()).unwrap_or_default();
+    match scheduler::set_sched_feature(&f, enabled != 0) { Ok(true) => 1, Err(e) => { eprintln!("setSchedFeature: {}", e); 0 }, _ => 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setSchedLibNameNative(mut env: JNIEnv, _class: JClass, names: JString) -> jint {
+    let n: String = env.get_string(&names).map(|s| s.into()).unwrap_or_default();
+    match scheduler::set_sched_lib_name(&n) { Ok(true) => 1, Err(e) => { eprintln!("setSchedLibName: {}", e); 0 }, _ => 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setSchedLibMaskForceNative(_env: JNIEnv, _class: JClass, mask: jint) -> jint {
+    match scheduler::set_sched_lib_mask_force(mask) { Ok(true) => 1, Err(e) => { eprintln!("setSchedLibMaskForce: {}", e); 0 }, _ => 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setSchedBurstUpdatePeriodNative(_env: JNIEnv, _class: JClass, ms: jint) -> jint {
+    match scheduler::set_sched_burst_update_period(ms) { Ok(true) => 1, Err(e) => { eprintln!("setSchedBurstUpdatePeriod: {}", e); 0 }, _ => 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setSchedBurstSmoothUpNative(_env: JNIEnv, _class: JClass, enabled: jint) -> jint {
+    match scheduler::set_sched_burst_smooth_up(enabled != 0) { Ok(true) => 1, Err(e) => { eprintln!("setSchedBurstSmoothUp: {}", e); 0 }, _ => 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setSchedBurstGrahamNative(_env: JNIEnv, _class: JClass, enabled: jint) -> jint {
+    match scheduler::set_sched_burst_graham(enabled != 0) { Ok(true) => 1, Err(e) => { eprintln!("setSchedBurstGraham: {}", e); 0 }, _ => 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setSchedAutogroupNative(_env: JNIEnv, _class: JClass, enabled: jint) -> jint {
+    match scheduler::set_sched_autogroup_enabled(enabled != 0) { Ok(true) => 1, Err(e) => { eprintln!("setSchedAutogroup: {}", e); 0 }, _ => 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setOvercommitRatioNative(_env: JNIEnv, _class: JClass, pct: jint) -> jint {
+    match scheduler::set_overcommit_ratio(pct) { Ok(true) => 1, Err(e) => { eprintln!("setOvercommitRatio: {}", e); 0 }, _ => 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_getCpusetMemsNative(mut env: JNIEnv, _class: JClass, group: JString) -> jstring {
+    let g: String = env.get_string(&group).map(|s| s.into()).unwrap_or_default();
+    create_jstring_safe(&env, scheduler::get_cpuset_mems(&g))
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setCpusetMemsNative(mut env: JNIEnv, _class: JClass, group: JString, mems: JString) -> jint {
+    let g: String = env.get_string(&group).map(|s| s.into()).unwrap_or_default();
+    let m: String = env.get_string(&mems).map(|s| s.into()).unwrap_or_default();
+    match scheduler::set_cpuset_mems(&g, &m) { Ok(true) => 1, Err(e) => { eprintln!("setCpusetMems: {}", e); 0 }, _ => 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setSchedUtilClampMinRtDefaultNative(_env: JNIEnv, _class: JClass, val: jint) -> jint {
+    match scheduler::set_sched_util_clamp_min_rt_default(val) { Ok(true) => 1, Err(e) => { eprintln!("setSchedUtilClampMinRtDefault: {}", e); 0 }, _ => 0 }
+}
+
+// ==================== CPU MISSING JNI BINDINGS ====================
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setCpufreqHardlimitMaxNative(_env: JNIEnv, _class: JClass, freq: jlong) -> jint {
+    match cpu::set_cpufreq_hardlimit_max(freq) { Ok(true) => 1, Err(e) => { eprintln!("setCpufreqHardlimitMax: {}", e); 0 }, _ => 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setCpufreqHardlimitMinNative(_env: JNIEnv, _class: JClass, freq: jlong) -> jint {
+    match cpu::set_cpufreq_hardlimit_min(freq) { Ok(true) => 1, Err(e) => { eprintln!("setCpufreqHardlimitMin: {}", e); 0 }, _ => 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setCpufreqHardlimitDvfsLockNative(_env: JNIEnv, _class: JClass, enabled: jint) -> jint {
+    match cpu::set_cpufreq_hardlimit_dvfs_lock(enabled != 0) { Ok(true) => 1, Err(e) => { eprintln!("setCpufreqHardlimitDvfsLock: {}", e); 0 }, _ => 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setMsmCpufreqLimitNative(_env: JNIEnv, _class: JClass, limit: jlong) -> jint {
+    match cpu::set_msm_cpufreq_limit(limit) { Ok(true) => 1, Err(e) => { eprintln!("setMsmCpufreqLimit: {}", e); 0 }, _ => 0 }
+}
+
+// ==================== POWER MISSING JNI BINDINGS ====================
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_readWakeupCountNative(_env: JNIEnv, _class: JClass) -> jint {
+    power::read_wakeup_count()
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_readSuspendCountNative(_env: JNIEnv, _class: JClass) -> jint {
+    power::read_suspend_count()
+}
+
+// ==================== NETWORK MISSING JNI BINDINGS ====================
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setDmesgRestrictNative(_env: JNIEnv, _class: JClass, enabled: jint) -> jint {
+    match network::set_dmesg_restrict(enabled != 0) { Ok(true) => 1, Err(e) => { eprintln!("setDmesgRestrict: {}", e); 0 }, _ => 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setPrintkNative(_env: JNIEnv, _class: JClass, level: jint) -> jint {
+    match network::set_printk(level) { Ok(true) => 1, Err(e) => { eprintln!("setPrintk: {}", e); 0 }, _ => 0 }
+}
+
+// ==================== DISPLAY MISSING JNI BINDINGS ====================
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setBacklightDimmerNative(_env: JNIEnv, _class: JClass, enabled: jint) -> jint {
+    if display::set_backlight_dimmer_enabled(enabled != 0) { 1 } else { 0 }
+}
+
+// ==================== THERMAL MISSING JNI BINDINGS ====================
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setEaraFakeThrottleNative(_env: JNIEnv, _class: JClass, enabled: jint) -> jint {
+    match thermal::set_eara_fake_throttle(enabled != 0) { Ok(true) => 1, Err(e) => { eprintln!("setEaraFakeThrottle: {}", e); 0 }, _ => 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setFpsgoForceNative(_env: JNIEnv, _class: JClass, enabled: jint) -> jint {
+    match thermal::set_fpsgo_force(enabled != 0) { Ok(true) => 1, Err(e) => { eprintln!("setFpsgoForce: {}", e); 0 }, _ => 0 }
+}
+
+// ==================== I/O MISSING JNI BINDINGS ====================
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_getIoSchedulerNative(mut env: JNIEnv, _class: JClass, device: JString) -> jstring {
+    let d: String = env.get_string(&device).map(|s| s.into()).unwrap_or_default();
+    create_jstring_safe(&env, io::get_io_scheduler(&d))
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_getAvailableIoSchedulersNative(mut env: JNIEnv, _class: JClass, device: JString) -> jstring {
+    let d: String = env.get_string(&device).map(|s| s.into()).unwrap_or_default();
+    create_jstring_safe(&env, serde_json::to_string(&io::get_available_io_schedulers(&d)).unwrap_or_else(|_| "[]".to_string()))
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_getIoReadaheadKbNative(mut env: JNIEnv, _class: JClass, device: JString) -> jint {
+    let d: String = env.get_string(&device).map(|s| s.into()).unwrap_or_default();
+    io::get_io_readahead_kb(&d)
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_getIoNrRequestsNative(mut env: JNIEnv, _class: JClass, device: JString) -> jint {
+    let d: String = env.get_string(&device).map(|s| s.into()).unwrap_or_default();
+    io::get_io_nr_requests(&d)
+}
+
+// ==================== GPU MISSING JNI BINDINGS ====================
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_getBusDcvsComponentsNative(mut env: JNIEnv, _class: JClass) -> jstring {
+    create_jstring_safe(&env, serde_json::to_string(&gpu::get_bus_dcvs_components()).unwrap_or_else(|_| "[]".to_string()))
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_getBusDcvsFreqNative(mut env: JNIEnv, _class: JClass, bus_name: JString) -> jstring {
+    let b: String = env.get_string(&bus_name).map(|s| s.into()).unwrap_or_default();
+    create_jstring_safe(&env, serde_json::to_string(&gpu::get_bus_dcvs_freq(&b)).unwrap_or_else(|_| "[]".to_string()))
+}
+
+// ==================== SYSCTL QCOM (proc/sys paths from stock ROM) ====================
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setSchedLatencyNsNative(_env: JNIEnv, _class: JClass, ns: jint) -> jint {
+    match sysctl_qcom::set_sched_latency_ns(ns) { Ok(true) => 1, _ => 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setSchedWakeupGranularityNsNative(_env: JNIEnv, _class: JClass, ns: jint) -> jint {
+    match sysctl_qcom::set_sched_wakeup_granularity_ns(ns) { Ok(true) => 1, _ => 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setSchedChildRunsFirstNative(_env: JNIEnv, _class: JClass, enabled: jint) -> jint {
+    match sysctl_qcom::set_sched_child_runs_first(enabled != 0) { Ok(true) => 1, _ => 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setRandomizeVaSpaceNative(_env: JNIEnv, _class: JClass, level: jint) -> jint {
+    match sysctl_qcom::set_randomize_va_space(level) { Ok(true) => 1, _ => 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setDirtyExpireCentisecsNative(_env: JNIEnv, _class: JClass, val: jint) -> jint {
+    match sysctl_qcom::set_dirty_expire_centisecs(val) { Ok(true) => 1, _ => 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setDirtyBackgroundRatioNative(_env: JNIEnv, _class: JClass, pct: jint) -> jint {
+    match sysctl_qcom::set_dirty_background_ratio(pct) { Ok(true) => 1, _ => 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setOvercommitMemoryNative(_env: JNIEnv, _class: JClass, mode: jint) -> jint {
+    match sysctl_qcom::set_overcommit_memory(mode) { Ok(true) => 1, _ => 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setExtraFreeKbytesNative(_env: JNIEnv, _class: JClass, kb: jint) -> jint {
+    match sysctl_qcom::set_extra_free_kbytes(kb) { Ok(true) => 1, _ => 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setDropCachesLevelNative(_env: JNIEnv, _class: JClass, level: jint) -> jint {
+    match sysctl_qcom::set_drop_caches_level(level) { Ok(true) => 1, _ => 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setPerfEventParanoidNative(_env: JNIEnv, _class: JClass, level: jint) -> jint {
+    match sysctl_qcom::set_perf_event_paranoid(level) { Ok(true) => 1, _ => 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setKptrRestrictNative(_env: JNIEnv, _class: JClass, level: jint) -> jint {
+    match sysctl_qcom::set_kptr_restrict(level) { Ok(true) => 1, _ => 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setTcpDefaultInitRwndNative(_env: JNIEnv, _class: JClass, val: jint) -> jint {
+    match sysctl_qcom::set_tcp_default_init_rwnd(val) { Ok(true) => 1, _ => 0 }
+}
+
+// ==================== BOOT QCOM EXTENDED ====================
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setBootAdspNative(_env: JNIEnv, _class: JClass) -> jint {
+    match boot_qcom::set_boot_adsp() { Ok(true) => 1, _ => 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setBootCdspNative(_env: JNIEnv, _class: JClass) -> jint {
+    match boot_qcom::set_boot_cdsp() { Ok(true) => 1, _ => 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setBootNpuNative(_env: JNIEnv, _class: JClass) -> jint {
+    match boot_qcom::set_boot_npu() { Ok(true) => 1, _ => 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setBootCvpNative(_env: JNIEnv, _class: JClass) -> jint {
+    match boot_qcom::set_boot_cvp() { Ok(true) => 1, _ => 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setBootSlpiNative(_env: JNIEnv, _class: JClass) -> jint {
+    match boot_qcom::set_boot_slpi() { Ok(true) => 1, _ => 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setPblMbaTimeoutMsNative(_env: JNIEnv, _class: JClass, ms: jint) -> jint {
+    match boot_qcom::set_pbl_mba_timeout_ms(ms) { Ok(true) => 1, _ => 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setModemAuthTimeoutMsNative(_env: JNIEnv, _class: JClass, ms: jint) -> jint {
+    match boot_qcom::set_modem_auth_timeout_ms(ms) { Ok(true) => 1, _ => 0 }
+}
+
+// ==================== STUNE ====================
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_getStuneValueNative(mut env: JNIEnv, _class: JClass, group: JString, param: JString) -> jstring {
+    let g: String = env.get_string(&group).map(|s| s.into()).unwrap_or_default();
+    let p: String = env.get_string(&param).map(|s| s.into()).unwrap_or_default();
+    create_jstring_safe(&env, stune::get_stune_value(&g, &p))
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setStuneValueNative(mut env: JNIEnv, _class: JClass, group: JString, param: JString, value: JString) -> jint {
+    let g: String = env.get_string(&group).map(|s| s.into()).unwrap_or_default();
+    let p: String = env.get_string(&param).map(|s| s.into()).unwrap_or_default();
+    let v: String = env.get_string(&value).map(|s| s.into()).unwrap_or_default();
+    match stune::set_stune_value(&g, &p, &v) { Ok(true) => 1, _ => 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setStuneColocateNative(_env: JNIEnv, _class: JClass, enabled: jint) -> jint {
+    match stune::set_stune_colocate(enabled != 0) { Ok(true) => 1, _ => 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_setStuneSchedBoostNoOverrideNative(mut env: JNIEnv, _class: JClass, group: JString, enabled: jint) -> jint {
+    let g: String = env.get_string(&group).map(|s| s.into()).unwrap_or_default();
+    match stune::set_stune_sched_boost_no_override(&g, enabled != 0) { Ok(true) => 1, _ => 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_getStuneGroupsNative(mut env: JNIEnv, _class: JClass) -> jstring {
+    create_jstring_safe(&env, serde_json::to_string(&stune::get_stune_groups()).unwrap_or_default())
+}
+
+// ==================== TOUCH ====================
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_hasXiaomiTouchNative(_env: JNIEnv, _class: JClass) -> jint {
+    if touch::has_xiaomi_touch() { 1 } else { 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_getFodStatusNative(env: JNIEnv, _class: JClass) -> jstring {
+    create_jstring_safe(&env, touch::get_fod_status())
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_hasFodNative(_env: JNIEnv, _class: JClass) -> jint {
+    if touch::has_fod() { 1 } else { 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_hasTpLockdownNative(_env: JNIEnv, _class: JClass) -> jint {
+    if touch::has_tp_lockdown() { 1 } else { 0 }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_readTpInfoNative(env: JNIEnv, _class: JClass) -> jstring {
+    create_jstring_safe(&env, touch::read_tp_info())
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_farewell_kernelmanager_kernel_NativeLib_readTpGestureNative(env: JNIEnv, _class: JClass) -> jstring {
+    create_jstring_safe(&env, touch::read_tp_gesture())
 }

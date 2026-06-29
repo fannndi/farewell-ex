@@ -42,7 +42,7 @@ fun MainApp() {
     val appCtx = LocalContext.current.applicationContext
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
-    val subRoutes = listOf("memory", "thermal", "kernel", "display", "xiaomi", "debug", "tier")
+    val subRoutes = listOf("memory", "thermal", "kernel", "display", "xiaomi", "debug", "tier", "daemon")
     val isSub = currentRoute in subRoutes
     val title = bottomNavItems.find { it.route == currentRoute }?.title ?:
         when (currentRoute) { "memory"->"Memory";"thermal"->"Thermal";"kernel"->"Kernel";"display"->"Display"
@@ -84,6 +84,7 @@ fun MainApp() {
             composable(Screen.Thermal.route) { ThermalScreen() }
             composable(Screen.Kernel.route) { KernelScreen() }
             composable(Screen.Display.route) { DisplayScreen() }
+            composable("daemon") { DaemonScreen() }
             composable(Screen.Xiaomi.route) { XiaomiScreen() }
             composable(Screen.Tier.route) { TierAccessScreen(viewModel = settingsVm) }
             composable(Screen.Debug.route) { DebugScreen(mainVm) }

@@ -1,12 +1,12 @@
 package com.farewell.kernelmanager.kernel
 
+import android.net.LocalSocket
+import android.net.LocalSocketAddress
 import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.BufferedReader
 import java.io.InputStreamReader
-import java.net.LocalSocket
-import java.net.LocalSocketAddress
 
 object FarewellDaemon {
     private const val TAG = "FarewellDaemon"

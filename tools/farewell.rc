@@ -1,0 +1,9 @@
+# Farewell kernel daemon — sysfs write service for custom ROM
+# Install: /vendor/etc/init/farewell.rc
+service farewell /vendor/bin/hw/farewelld
+    class hal
+    user system
+    group system
+    socket farewell stream 0660 system system
+    seclabel u:r:farewell_service:s0
+    oneshot

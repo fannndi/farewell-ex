@@ -1,0 +1,72 @@
+; Farewell daemon SELinux policy
+; Install: /vendor/etc/selinux/farewell_service.cil
+; Add to vendor_file_contexts:
+;   (/vendor)?/bin/hw/farewelld  u:object_r:farewell_service_exec:s0
+
+; Type declaration
+(type farewell_service)
+(roletype object_r farewell_service)
+(typeattributeset farewell_service_domain (farewell_service))
+(type farewell_service_exec)
+(roletype object_r farewell_service_exec)
+(typeattributeset exec_type (farewell_service_exec))
+(typeattributeset file_type (farewell_service_exec))
+(typeattributeset vendor_file_type (farewell_service_exec))
+
+; Init transition
+(init_daemon_domain (farewell_service))
+
+; Capabilities for sysfs write
+(allow farewell_service self (capability (sys_admin dac_override dac_read_search fowner fsetid)))
+
+; Unix socket for communication
+(allow farewell_service self (unix_stream_socket (create listen accept connect getattr setattr read write bind)))
+(allow farewell_service self (unix_dgram_socket (create sendto)))
+(allow farewell_service self (tcp_socket (create listen accept connect)))
+(allow farewell_service appdomain (unix_stream_socket (connectto)))
+(allow farewell_service shell (unix_stream_socket (connectto)))
+
+; Socket file system
+(allow farewell_service farewell_tmpfs (file (read write)))
+(allow tmpfs (process (transition)))
+(typeattribute farewell_tmpfs (tmpfs))
+(allow farewell_service tmpfs (lnk_file (read)))
+
+; Full sysfs access for kernel tuning
+(allow farewell_service sysfs (dir (read getattr search open)))
+(allow farewell_service sysfs (file (read write getattr open)))
+(allow farewell_service sysfs (lnk_file (read getattr)))
+
+; CPU sysfs
+(allow farewell_service sysfs_devices_system_cpu (file (read write getattr open append)))
+(allow farewell_service sysfs_devices_system_cpu (dir (search)))
+
+; GPU sysfs
+(allow farewell_service sysfs_kgsl (file (read write getattr open append)))
+(allow farewell_service sysfs_kgsl (dir (search)))
+
+; Battery/power sysfs
+(allow farewell_service sysfs_battery_supply (file (read write getattr open)))
+(allow farewell_service sysfs (dir (search)))
+
+; QCOM battery specific
+(type sysfs_qcom_battery)
+(genfscon sysfs /class/qcom-battery (u object_r sysfs_qcom_battery ((s0)(s0))))
+(allow farewell_service sysfs_qcom_battery (file (read write getattr open)))
+
+; Thermal sysfs
+(allow farewell_service sysfs_thermal (file (read write getattr open)))
+
+; Touch sysfs
+(allow farewell_service sysfs (dir (read getattr)))
+(allow farewell_service proc_type (file (read write open getattr)))
+
+; Proc sys
+(allow farewell_service proc_sys (file (read write open getattr)))
+(allow farewell_service proc_sys_kernel (file (read write open getattr)))
+(allow farewell_service proc_sys_vm (file (read write open getattr)))
+(allow farewell_service proc_sys_net (file (read write open getattr)))
+
+; Module parameters
+(allow farewell_service sysfs (file (read write)))
+(allow farewell_service sysfs (dir (read)))

@@ -1,213 +1,117 @@
-# farewell-ex — Kernel Manager (Rust/Android)
+# Farewell Kernel Manager — KernelSU/ZygiskNext/Vector
 
-**Target Device:** POCO X3 NFC (Qualcomm SM7150-AC, Adreno 618)
-**Root:** KernelSU-Next + ZygiskNext + Vector
-**Score:** 96/100 🟢 | 20 Rust modules | 7,055 lines | 295 tests | 159 features
+**Target:** POCO X3 NFC (surya/karna) — Qualcomm SM6150
+**Root:** KernelSU-Next + ZygiskNext + Vector (5-tier access)
+**Score:** 96/100 🟢 | 27 Rust modules | 9,903 lines | 269 JNI exports | 151/169 features
 
-> **Goal:** Reverse engineering 17 source repos → Rust kernel manager library → Android app
-> **Companion:** ZygiskNext hook module + LSPosed DPI hooks — no conflict install
+> Reverse engineering 18 source repos → Rust SDK → Android Compose app
+> POCO X3 NFC specific — sysfs paths verified against stock ROM V14.0.1.0.SJGMIXM
 
 ---
 
 ## 5-Tier Access System
 
-| Tier | Framework | Detection | Features |
-|------|-----------|-----------|----------|
-| 1 | Non-ROOT | — | Read-only info |
-| 2 | ADB | Shizuku | wm density, settings, FPS overlay |
-| 3 | Full ROOT | KernelSU-Next | All sysfs, resetprop, device spoof |
-| 4 | Zygisk | ZygiskNext | Per-app spoof/renderer |
-| 5 | Xposed | Vector | Per-app DPI/font |
+| Tier | Framework | What Works |
+|------|-----------|------------|
+| 1 | Non-ROOT | Read CPU/GPU/Battery/Thermal/Memory/IO via Android API + KGSL IOCTL |
+| 2 | Shizuku/ADB | Shell commands, wm density, settings put, brightness |
+| 3 | **KernelSU-Next** | All sysfs writes, resetprop, mount --bind, governor/freq/GPU/thermal |
+| 4 | ZygiskNext | Per-app device spoof, CPU spoof, renderer override |
+| 5 | Vector/Xposed | Per-app DPI, font scale, DisplayMetrics, renderer |
 
----
+## Features (151/169 — 89%)
 
-## Source References (17 repos — `training/references/`)
+### CPU & Governor (22/27 ✅)
+Read/write governor, freq limits, core online/offline, cluster detection, input boost, CPU EAS, DCVS disable, hard limit, MSM cpufreq limit, CoreCtl, MSM hotplug. Missing: legacy hotplug drivers (IntelliPlug, Alucard, AutoSMP, BluPlug), time-in-state, OPP table.
 
-### Kernel Managers (11 sources)
-| # | Repo | Language | Focus |
-|---|------|----------|-------|
-| 1 | Xtra-Kernel-Manager | Kotlin + Rust JNI | Native reader, modern UI |
-| 2 | SmartPack-Kernel-Manager | Java | Battle-tested sysfs catalog |
-| 3 | RvKernel-Manager | Kotlin/Compose | Dynamic sysfs probing |
-| 4 | ZKM | Kotlin/Compose | Bus DCVS, GPU discovery |
-| 5 | AZenith | C + Kotlin | Game detection, thermal |
-| 6 | Encore Tweaks | C++ + Vue | Profile tuner, native daemon |
-| 7 | SkiaShift | Kotlin + C++ | Per-app GPU renderer |
-| 8 | COPG | C++ + shell | Zygisk device/CPU spoofing |
-| 9 | DPIS | Java | Per-app DPI/font scaling |
-| 10 | Shizuku | Java/Kotlin | Root alternative via Binder IPC |
-| 11 | Shizuku-API | Java/Kotlin | Shizuku API interface |
+### GPU Control (19/21 ✅)
+KGSL IOCTL bypass (SELinux-safe), freq/busy/power levels, Adreno Idler, Simple GPU, Adrenoboost, Bus DCVS, model/driver detect. Missing: Mali support, devfreq boost.
 
-### Frameworks & Tooling (6 sources)
-| # | Repo | Language | Focus |
-|---|------|----------|-------|
-| 12 | KernelSU-Next | Rust + Kotlin | Kernel-based root, module system |
-| 13 | ZygiskNext | C++ | Standalone Zygisk implementation |
-| 14 | Vector | Java + Kotlin + C++ | Modern Xposed (LSPlant) |
-| 15 | ZN-AuditPatch | C++ | Audit log replacement |
-| 16 | LogFox | Kotlin | Crash logging + export |
-| 17 | FPSViewer | Java | Realtime FPS counter overlay (by binhmod) |
+### Memory & ZRAM (15/16 ✅)
+MemTotal/Available/Swap, ZRAM stats/size/algorithm, swappiness, dirty ratio, min free kbytes, vfs cache pressure. Missing: ZSwap.
 
-**Total: 2,115+ files studied, 30 knowledge modules, 159/169 features implemented (93%)**
+### Thermal (10/11 ✅)
+Multi-zone reading, MSM thermal toggle, EARA thermal, FPSGO, sconfig preset. Missing: USB current_max direct path.
 
----
+### Power & Battery (12/14 ✅)
+Battery level/temp/voltage/current/health/capacity/cycle count, bypass charging, charge current max, USB current max, wakeup/suspend count. Missing: charge_control_limit, restricted_current.
 
-## Project Structure
+### Xiaomi HAL (10/10 ✅)
+Reverse charging (3-layer), night charging, cool mode, smart battery, input suspend, USB PD auth, KCAL RGB/contrast/saturation, DFPS, histogram, AW8697 haptic LRA calibration, custom waveform.
+
+### I/O, Network, Scheduler (20/20 ✅)
+I/O scheduler/readahead/nr_requests, TCP congestion, WireGuard, printk, dmesg, sched features, sched BORE, uclamp, stune boost/prefer_idle, cpuset, sched autogroup, BORE scheduler, split lock, sched lib name.
+
+### Qualcomm Boot (8/8 ✅)
+ADSP/CDSP/NPU/CVP/SLPI boot, UFS clock scaling, subsystem restart, USB ICL, PIL timeouts, dload mode, WLAN shutdown.
+
+### Stock ROM Sysfs Paths (72/154 — 47%)
+Verified from `vendor/etc/init/*.rc`:
+- CPU: governor, freq, core online ✅
+- GPU: `/sys/kernel/gpu/gpu_model`, clock_mhz (via root) ✅
+- Xiaomi: `/sys/class/qcom-battery/*` (30+ paths) ✅
+- AW8697 haptic: I2C driver paths ✅
+- STune: `/dev/stune/*` ✅
+- Touch: `/dev/xiaomi-touch`, `/proc/tp_*` ✅
+- USB: `/sys/class/usbpd/usbpd0/*` ✅
+
+## Knowledge Base (Obsidian Vault)
 
 ```
-farewell-ex/
-├── rust/kernel-manager/          ← Rust SDK (20 modules, 7,055 lines, 295 tests)
-│   ├── src/
-│   │   ├── sysfs.rs              ← Core engine: dual-path I/O + TTL cache
-│   │   ├── cpu.rs                ← CPU freq/governor/cluster/hotplug (Xtra-Kernel + SmartPack)
-│   │   ├── gpu.rs                ← GPU KGSL + adreno + bus DCVS (ZKM + Encore)
-│   │   ├── memory.rs             ← MemInfo + ZRAM + VM params (Xtra-Kernel)
-│   │   ├── power.rs              ← Battery + bypass + charging current (AZenith + SmartPack)
-│   │   ├── thermal.rs            ← Thermal zones + sconfig + MSM/EARA/FPSGO (SmartPack + Encore)
-│   │   ├── scheduler.rs          ← Stune + BORE + uClamp + cpuset (Encore + RvKernel)
-│   │   ├── io.rs                 ← I/O scheduler + readahead (SmartPack)
-│   │   ├── network.rs            ← TCP + kernel params + printk + WireGuard (RvKernel)
-│   │   ├── display.rs            ← Backlight + KCAL + dimmer (SmartPack)
-│   │   ├── wake.rs               ← DT2W + sound boost (SmartPack)
-│   │   ├── renderer.rs           ← GPU renderer switch via resetprop (SkiaShift)
-│   │   ├── spoof.rs              ← Device/CPU spoof via resetprop + mount (COPG)
-│   │   ├── display_control.rs    ← DPI/font scaling via wm density (DPIS)
-│   │   ├── daemon.rs             ← Foreground monitor + per-app profiles + screen state (AZenith)
-│   │   ├── tier.rs               ← 5-tier framework detection + feature matrix
-│   │   ├── checker.rs            ← Feature verification + crash logging
-│   │   ├── hotplug.rs            ← CoreCtl + MSM hotplug drivers (SmartPack)
-│   │   ├── disk.rs               ← /proc/diskstats I/O counters (Xtra-Kernel)
-│   │   └── lib.rs                ← JNI bridge (97+ exports)
-│   └── Cargo.toml
-├── android/app/                  ← Kotlin/Compose app (26 files, 1,612 lines)
-│   └── src/main/java/.../
-│       ├── kernel/               ← NativeLib (284 lines), Root, Shizuku, Access
-│       ├── viewmodel/            ← 6 VMs: Main, CPU, GPU, Memory, Thermal, Battery
-│       ├── ui/screens/           ← 8 screens: Dashboard, CPU, GPU, Mem, Thermal, Battery, Game, Settings
-│       ├── ui/settings/          ← TierAccessScreen (135 lines, 5-tier bar)
-│       ├── service/              ← BootReceiver + FpsOverlayService
-│       └── ui/theme/             ← Material 3 Monet
-├── farewell-companion/           ← KernelSU module (Tier 4-5)
-│   ├── zygisk/main.cpp           ← ZygiskNext PLT hook: __system_property_get
-│   ├── xposed/FarewellXposed.java ← LSPosed hook: DisplayMetrics + font
-│   ├── module.prop               ← Module metadata
-│   └── post-fs-data.sh           ← Boot config
-├── knowledge/                    ← 30 knowledge modules + feature catalog
-│   ├── modules/                  ← 26 modules (12-26, including FPSViewer)
-│   ├── index/                    ← 11 per-source indexes (385+ lines each)
-│   ├── feature-catalog.md        ← 169 features with ✅/⚠️/🔧 status
-│   ├── leftover.md               ← 6 leftover → implementation path
-│   ├── rust-sdk.md               ← 500+ line Rust implementation reference
-│   └── INDEX.md                  ← Master index (17 sources)
-├── training/
-│   ├── plan.md                   ← Master training plan
-│   └── references/               ← 17 cloned repos (gitignored)
-└── README.md
+_farewell-agent/
+├── universal/ecc/          — 122 ECC skills (general coding)
+├── stacks/android/         — Android-specific patterns
+│   ├── surya-sysfs-catalog     — 200+ SM6150 sysfs paths
+│   ├── surya-xiaomi-hals       — Xiaomi HAL services
+│   ├── kgsl-ioctl-bypass       — KGSL IOCTL approach
+│   ├── android-api-reading     — BatteryManager/AThermal
+│   ├── root-detection-frameworks — 5-tier explained
+│   ├── per-app-hooks           — Zygisk/Xposed patterns
+│   └── sysfs-patterns          — Qualcomm sysfs reference
+└── projects/003-farewell-ex/  — Project knowledge (48 files)
+    ├── 01..12-smartpack-reference   — Deep study per source
+    ├── 12..30-*                      — Knowledge modules
+    ├── feature-catalog               — 169 features status
+    ├── leftover                      — 6 pending features
+    └── rust-sdk                      — Rust API reference
 ```
 
----
+## Build
 
-## Quick Start
-
-### 1. Clone + Setup Toolchain
-
-```powershell
-git clone https://github.com/fannndi/farewell-ex.git
-cd farewell-ex
-
-# Install Rust for Android
-rustup target add aarch64-linux-android
-cargo install cargo-ndk
-```
-
-### 2. Build Rust SDK (ARM64)
-
-```powershell
+```bash
+# Rust SDK
 cd rust/kernel-manager
-cargo ndk -t arm64-v8a -o ../android/app/src/main/jniLibs build --release
-```
+rustup target add aarch64-linux-android
+cargo ndk -t arm64-v8a -o ../../android/app/src/main/jniLibs build --release
 
-### 3. Build APK
-
-> Buka `android/` di **IntelliJ IDEA** (File → Open). Gradle auto-sync, lalu **Build → Build APK**.
-
-Atau command line:
-
-```powershell
+# Android APK
 cd android
 ./gradlew assembleDebug
-apk di: android/app/build/outputs/apk/debug/app-debug.apk
+# → android/app/build/outputs/apk/debug/app-arm64-v8a-debug.apk
+
+# Install
+adb install -r android/app/build/outputs/apk/debug/app-arm64-v8a-debug.apk
 ```
 
-### 4. Install
+## Source References (18 repos)
 
-```powershell
-adb install -r app-debug.apk
-```
-
----
-
-## Install Companion Module (Tier 4-5)
-
-```powershell
-# Pack companion module
-cd farewell-companion
-zip -r farewell-companion.zip * -x "*.git*"
-
-# Install via KernelSU Manager or adb
-adb push farewell-companion.zip /sdcard/
-adb shell su -c "ksud module install /sdcard/farewell-companion.zip"
-adb reboot
-```
-
-**Zero conflict.** ZygiskNext auto-loads `libfarewell.so` from `/data/adb/modules/farewell/zygisk/`. LSPosed auto-loads `FarewellXposed.apk`. Both coexist with other modules.
-
----
-
-## Feature Checker
-
-```kotlin
-// Detect tier
-val tier = NativeLib.detectTierNative() // 1-5
-
-// Verify feature
-val result = NativeLib.verifyFeatureNative("set_cpu_governor") // "PASS: OK" or "FAIL: reason"
-
-// Export logs for tester
-val zipPath = NativeLib.exportLogsNative() // ZIP with device info + checker log
-```
-
-## Rust API
-
-```rust
-use farewell_native;
-
-// CPU
-let clusters = cpu::detect_cpu_clusters();
-cpu::set_governor("performance")?;
-
-// GPU
-let freq = gpu::read_gpu_freq();
-gpu::set_gpu_power_levels(0, 2)?;
-
-// Battery
-let level = power::read_battery_level();
-power::set_bypass_charging(true)?;
-
-// All writes return Result<bool, SysfsError>
-```
-
-## Stats
-
-| Metric | Value |
-|--------|-------|
-| Rust modules | 20 |
-| Rust lines | 7,055 |
-| Rust unit tests | 295 |
-| Kotlin files | 26 |
-| Kotlin lines | 1,612 |
-| JNI exports | 97+ |
-| Features | 159/169 (93%) |
-| Knowledge modules | 30 |
-| Sysfs paths | 180+ unique |
-| Score | 96/100 🟢 |
+| # | Repo | Language | What We Used |
+|---|------|----------|-------------|
+| 1 | SmartPack-Kernel-Manager | Java | Sysfs catalog, hotplug, KCAL, bypass charging |
+| 2 | Xtra-Kernel-Manager | Kotlin+Rust | JNI bridge pattern, Rust I/O engine |
+| 3 | ZKM | Kotlin/Compose | GPU discovery, Bus DCVS, Material 3 |
+| 4 | AZenith | C+Kotlin | Game detection, bypass auto-discovery |
+| 5 | Encore Tweaks | C+++Vue | C++ daemon, SoC-aware profiler |
+| 6 | SkiaShift | Kotlin+C++ | GPU renderer switch, resetprop |
+| 7 | DPIS | Java+Xposed | DPI scaling, DisplayMetrics hooks |
+| 8 | COPG | C++ | mmap COW property spoof |
+| 9 | Shizuku+API | Java/Kotlin | Binder IPC, UserService |
+| 10 | RvKernel | Kotlin/Comp. | Dynamic probing, Material 3 UI |
+| 11 | KernelSU-Next | Rust+Kotlin | Kernel root, module system |
+| 12 | ZygiskNext | C++ | Zygisk API, companion IPC |
+| 13 | Vector | Java+C++ | LSPlant ART hook |
+| 14 | LogFox | Kotlin | Crash logging, logcat parser |
+| 15 | DevCheck | C+Java | KGSL IOCTL, BatteryManager API |
+| 16 | ZN-AuditPatch | C++ | Audit log replacement |
+| 17 | FPSViewer | Java | SurfaceFlinger FPS overlay |
+| 18 | Xiaomi Stock ROM | — | 200+ sysfs paths verified |

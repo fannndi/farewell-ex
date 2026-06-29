@@ -1,7 +1,12 @@
 package com.farewell.kernelmanager.viewmodel
 
+import androidx.lifecycle.viewModelScope
 import com.farewell.kernelmanager.kernel.NativeLib
 import com.farewell.kernelmanager.kernel.SysfsReader
+import com.farewell.kernelmanager.ui.components.TestResult
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 data class CpuState(
     val clusters: List<NativeLib.ClusterInfo> = emptyList(),
@@ -14,6 +19,7 @@ data class CpuState(
 )
 
 class CPUViewModel : PollingViewModel<CpuState>(CpuState(), intervalMs = 2000) {
+    val lastTest = mutableMapOf<String, TestResult>()
 
     override suspend fun refresh() {
         val clusters = if (NativeLib.isAvailable()) NativeLib.detectCpuClusters() ?: emptyList() else emptyList()
@@ -25,15 +31,22 @@ class CPUViewModel : PollingViewModel<CpuState>(CpuState(), intervalMs = 2000) {
         updateState { CpuState(clusters, cores, model, load, temp, freqs, false) }
     }
 
-    fun setGovernor(cluster: Int, governor: String) {
-        viewModelScopeIO { NativeLib.setGovernorNative(governor) }
-    }
+    fun setGovernor(cluster: Int, governor: String) { viewModelScopeIO { NativeLib.setGovernorNative(governor) } }
+    fun setFreqLimit(core: Int, min: Int, max: Int) { viewModelScopeIO { NativeLib.setFreqLimitNative(core, min, max) } }
+    fun setCoreOnline(core: Int, online: Boolean) { viewModelScopeIO { NativeLib.setCoreOnlineNative(core, online) } }
 
-    fun setFreqLimit(core: Int, min: Int, max: Int) {
-        viewModelScopeIO { NativeLib.setFreqLimitNative(core, min, max) }
-    }
+    // ── Test methods ──
+    fun testGovernor(name: String = "performance") { test("governor") { NativeLib.setGovernorNative(name) == 1 } }
+    fun testFreqLimit() { test("freq_max") { NativeLib.setFreqLimitNative(0, 300000, 2400000) == 1 } }
+    fun testCoreOnline(core: Int) { test("core_$core") { NativeLib.setCoreOnlineNative(core, true) == 1 } }
+    fun testInputBoost() { test("input_boost") { NativeLib.setInputBoostMsNative(500) == 1 } }
+    fun testStune() { test("stune") { NativeLib.setStuneBoostNative(10) == 1 } }
 
-    fun setCoreOnline(core: Int, online: Boolean) {
-        viewModelScopeIO { NativeLib.setCoreOnlineNative(core, online) }
+    private fun test(key: String, block: suspend () -> Boolean) {
+        viewModelScope.launch {
+            lastTest[key] = TestResult.Loading
+            val ok = withContext(Dispatchers.IO) { block() }
+            lastTest[key] = if (ok) TestResult.Pass("OK") else TestResult.Fail("write failed")
+        }
     }
 }

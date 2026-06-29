@@ -1,0 +1,18 @@
+# Farewell daemon — sysfs write SELinux rules
+# This file is hot-loaded by init at boot
+type farewell_service, domain;
+type farewell_service_exec, exec_type, file_type, vendor_file_type;
+init_daemon_domain(farewell_service);
+allow farewell_service self:unix_stream_socket create_stream_socket_perms;
+allow farewell_service self:unix_dgram_socket create_socket_perms;
+allow farewell_service appdomain:unix_stream_socket connectto;
+allow farewell_service shell:unix_stream_socket connectto;
+allow farewell_service sysfs:file rw_file_perms;
+allow farewell_service sysfs_devices_system_cpu:file rw_file_perms;
+allow farewell_service sysfs_kgsl:file rw_file_perms;
+allow farewell_service sysfs_devices_virtual:file rw_file_perms;
+allow farewell_service sysfs_battery_supply:file rw_file_perms;
+allow farewell_service proc_sys:file rw_file_perms;
+allow farewell_service proc_sys_kernel:file rw_file_perms;
+allow farewell_service proc_sys_vm:file rw_file_perms;
+allow farewell_service self:capability { sys_admin dac_override dac_read_search fowner fsetid };

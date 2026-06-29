@@ -32,8 +32,8 @@ fun DebugScreen(mainVm: MainViewModel) {
     Column(modifier = Modifier.fillMaxSize().padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)) {
 
-        Text("Debug Diagnostic", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-        Text("Test all features per tier. Log exported to /sdcard/root.log",
+        Text("Diagnostic", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+        Text("Tes semua fitur per tier. Log ke /sdcard/root.log. Cari panduan: farewell-agent cari <topik>",
             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
 
         Card(modifier = Modifier.fillMaxWidth()) {

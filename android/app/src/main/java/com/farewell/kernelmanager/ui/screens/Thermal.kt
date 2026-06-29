@@ -13,7 +13,7 @@ import com.farewell.kernelmanager.viewmodel.ThermalState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ThermalScreen(viewModel: ThermalViewModel, snackbar: SnackbarHostState? = null) {
+fun ThermalScreen(viewModel: ThermalViewModel = androidx.lifecycle.viewmodel.compose.viewModel(), snackbar: SnackbarHostState? = null) {
     val state by viewModel.state.collectAsState()
     Column(modifier = Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         ThermalContent(state, onSetPreset = { viewModel.setPreset(it) })

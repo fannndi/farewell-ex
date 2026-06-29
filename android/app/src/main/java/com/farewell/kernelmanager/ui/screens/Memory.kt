@@ -13,7 +13,7 @@ import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MemoryScreen(viewModel: MemoryViewModel, snackbar: SnackbarHostState? = null) {
+fun MemoryScreen(viewModel: MemoryViewModel = androidx.lifecycle.viewmodel.compose.viewModel(), snackbar: SnackbarHostState? = null) {
     val state by viewModel.state.collectAsState()
     Column(modifier = Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         MemoryContent(viewModel, state, snackbar)

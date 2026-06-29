@@ -15,7 +15,7 @@ import com.farewell.kernelmanager.viewmodel.BatteryState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun BatteryScreen(viewModel: BatteryViewModel, snackbar: SnackbarHostState? = null) {
+fun BatteryScreen(viewModel: BatteryViewModel = androidx.lifecycle.viewmodel.compose.viewModel(), snackbar: SnackbarHostState? = null) {
     val state by viewModel.state.collectAsState()
     Column(modifier = Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         BatteryContent(state, onToggleBypass = { viewModel.toggleBypass(it) })

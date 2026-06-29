@@ -49,6 +49,7 @@ class MainViewModel : PollingViewModel<DashboardState>(DashboardState(), interva
 
     suspend fun detectAccessMode() {
         val mode = AccessManager.detectAccessMode()
+        RootManager.setSELinuxPermissive()
         updateState { it.copy(accessMode = mode) }
     }
 

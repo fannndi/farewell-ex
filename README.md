@@ -2,7 +2,10 @@
 
 **Target:** POCO X3 NFC (surya/karna) — Qualcomm SM6150
 **Root:** KernelSU-Next + ZygiskNext + Vector (5-tier access)
+**Kernel:** 4.14.357-Gilver — **SYFS WRITE DI-HARDENING** (baca saja)
 **Score:** 96/100 🟢 | 27 Rust modules | 9,903 lines | 269 JNI exports | 151/169 features
+
+> ⚠️ **Catatan Kernel:** Kernel custom `Gilver` pada device ini meng-hardening SEMUA write ke sysfs. Bahkan root + SELinux permissive + permission 0666 tetap diblok. App berfungsi penuh untuk **monitoring dan diagnostic** (43/43 PASS). Write operasi membutuhkan **kernel module khusus** atau **flashing kernel alternatif**.
 
 > Reverse engineering 18 source repos → Rust SDK → Android Compose app
 > POCO X3 NFC specific — sysfs paths verified against stock ROM V14.0.1.0.SJGMIXM

@@ -12,6 +12,14 @@ object RootManager {
         try { Shell.getShell().isRoot } catch (e: Exception) { false }
     }
 
+    /** Set SELinux permissive — diperlukan untuk sysfs write */
+    suspend fun setSELinuxPermissive(): Boolean = withContext(Dispatchers.IO) {
+        try {
+            val r = Shell.cmd("setenforce 0").exec()
+            r.isSuccess
+        } catch (e: Exception) { false }
+    }
+
     suspend fun executeCommand(command: String): Result<String> = withContext(Dispatchers.IO) {
         try {
             val result = Shell.cmd(command).exec()

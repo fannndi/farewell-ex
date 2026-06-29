@@ -1,120 +1,186 @@
-# Farewell Kernel Manager — KernelSU/ZygiskNext/Vector
+# Farewell Kernel Manager
 
-**Target:** POCO X3 NFC (surya/karna) — Qualcomm SM6150
-**Root:** KernelSU-Next + ZygiskNext + Vector (5-tier access)
-**Kernel:** 4.14.357-Gilver — **SYFS WRITE DI-HARDENING** (baca saja)
-**Score:** 96/100 🟢 | 27 Rust modules | 9,903 lines | 269 JNI exports | 151/169 features
-
-> ⚠️ **Catatan Kernel:** Kernel custom `Gilver` pada device ini meng-hardening SEMUA write ke sysfs. Bahkan root + SELinux permissive + permission 0666 tetap diblok. App berfungsi penuh untuk **monitoring dan diagnostic** (43/43 PASS). Write operasi membutuhkan **kernel module khusus** atau **flashing kernel alternatif**.
-
-> Reverse engineering 18 source repos → Rust SDK → Android Compose app
-> POCO X3 NFC specific — sysfs paths verified against stock ROM V14.0.1.0.SJGMIXM
+**Target:** POCO X3 NFC (surya/karna) — Qualcomm SM6150  
+**Rust SDK:** 27 modules · 9,903 lines · 269 JNI exports  
+**Knowledge:** 18 source repos · Stock ROM vendor extraction  
 
 ---
 
-## 5-Tier Access System
+## Architecture
 
-| Tier | Framework | What Works |
-|------|-----------|------------|
-| 1 | Non-ROOT | Read CPU/GPU/Battery/Thermal/Memory/IO via Android API + KGSL IOCTL |
-| 2 | Shizuku/ADB | Shell commands, wm density, settings put, brightness |
-| 3 | **KernelSU-Next** | All sysfs writes, resetprop, mount --bind, governor/freq/GPU/thermal |
-| 4 | ZygiskNext | Per-app device spoof, CPU spoof, renderer override |
-| 5 | Vector/Xposed | Per-app DPI, font scale, DisplayMetrics, renderer |
-
-## Features (151/169 — 89%)
-
-### CPU & Governor (22/27 ✅)
-Read/write governor, freq limits, core online/offline, cluster detection, input boost, CPU EAS, DCVS disable, hard limit, MSM cpufreq limit, CoreCtl, MSM hotplug. Missing: legacy hotplug drivers (IntelliPlug, Alucard, AutoSMP, BluPlug), time-in-state, OPP table.
-
-### GPU Control (19/21 ✅)
-KGSL IOCTL bypass (SELinux-safe), freq/busy/power levels, Adreno Idler, Simple GPU, Adrenoboost, Bus DCVS, model/driver detect. Missing: Mali support, devfreq boost.
-
-### Memory & ZRAM (15/16 ✅)
-MemTotal/Available/Swap, ZRAM stats/size/algorithm, swappiness, dirty ratio, min free kbytes, vfs cache pressure. Missing: ZSwap.
-
-### Thermal (10/11 ✅)
-Multi-zone reading, MSM thermal toggle, EARA thermal, FPSGO, sconfig preset. Missing: USB current_max direct path.
-
-### Power & Battery (12/14 ✅)
-Battery level/temp/voltage/current/health/capacity/cycle count, bypass charging, charge current max, USB current max, wakeup/suspend count. Missing: charge_control_limit, restricted_current.
-
-### Xiaomi HAL (10/10 ✅)
-Reverse charging (3-layer), night charging, cool mode, smart battery, input suspend, USB PD auth, KCAL RGB/contrast/saturation, DFPS, histogram, AW8697 haptic LRA calibration, custom waveform.
-
-### I/O, Network, Scheduler (20/20 ✅)
-I/O scheduler/readahead/nr_requests, TCP congestion, WireGuard, printk, dmesg, sched features, sched BORE, uclamp, stune boost/prefer_idle, cpuset, sched autogroup, BORE scheduler, split lock, sched lib name.
-
-### Qualcomm Boot (8/8 ✅)
-ADSP/CDSP/NPU/CVP/SLPI boot, UFS clock scaling, subsystem restart, USB ICL, PIL timeouts, dload mode, WLAN shutdown.
-
-### Stock ROM Sysfs Paths (72/154 — 47%)
-Verified from `vendor/etc/init/*.rc`:
-- CPU: governor, freq, core online ✅
-- GPU: `/sys/kernel/gpu/gpu_model`, clock_mhz (via root) ✅
-- Xiaomi: `/sys/class/qcom-battery/*` (30+ paths) ✅
-- AW8697 haptic: I2C driver paths ✅
-- STune: `/dev/stune/*` ✅
-- Touch: `/dev/xiaomi-touch`, `/proc/tp_*` ✅
-- USB: `/sys/class/usbpd/usbpd0/*` ✅
-
-## Knowledge Base (Obsidian Vault)
+### ROM-Side Daemon (kernel tuning tanpa root)
 
 ```
-_farewell-agent/
-├── universal/ecc/          — 122 ECC skills (general coding)
-├── stacks/android/         — Android-specific patterns
-│   ├── surya-sysfs-catalog     — 200+ SM6150 sysfs paths
-│   ├── surya-xiaomi-hals       — Xiaomi HAL services
-│   ├── kgsl-ioctl-bypass       — KGSL IOCTL approach
-│   ├── android-api-reading     — BatteryManager/AThermal
-│   ├── root-detection-frameworks — 5-tier explained
-│   ├── per-app-hooks           — Zygisk/Xposed patterns
-│   └── sysfs-patterns          — Qualcomm sysfs reference
-└── projects/003-farewell-ex/  — Project knowledge (48 files)
-    ├── 01..12-smartpack-reference   — Deep study per source
-    ├── 12..30-*                      — Knowledge modules
-    ├── feature-catalog               — 169 features status
-    ├── leftover                      — 6 pending features
-    └── rust-sdk                      — Rust API reference
+┌──────────────────────────────────────────────────┐
+│  farewelld — Native C daemon di vendor partition  │
+├──────────────────────────────────────────────────┤
+│  /vendor/bin/hw/farewelld                         │
+│  /vendor/etc/init/farewell.rc                     │
+│  /vendor/etc/selinux/farewell_service.cil          │
+└────────────┬─────────────────────────────────────┘
+             │ Unix socket: /dev/socket/farewell
+┌────────────▼─────────────────────────────────────┐
+│  App (untrusted_app)                              │
+│                                                   │
+│  ┌─────────────────────────────────────────────┐  │
+│  │ SocketClient.kt                              │  │
+│  │ send("write /sys/.../scaling_governor perf") │  │
+│  │ send("check /sys/.../target_freq")           │  │
+│  │ send("read /proc/version")                   │  │
+│  └─────────────────────────────────────────────┘  │
+└──────────────────────────────────────────────────┘
 ```
+
+**Flow:** App → Unix socket → `farewelld` (vendor context) → sysfs write ✅  
+**SELinux:** `farewell_service` domain diizinkan write ke semua sysfs path  
+
+### App (tanpa daemon — fallback monitoring)
+
+Jika daemon tidak terdeteksi, app tetap bisa:
+
+| Mode | Bisa | Tidak Bisa |
+|------|------|------------|
+| **Monitoring** | CPU/GPU/Battery/Thermal read | — |
+| **Diagnostic** | 43/43 PASS (cek fitur) | — |
+| **Daemon connected** | All writes ✅ | — |
+| **No daemon** | Read-only | Write sysfs ❌ |
+
+---
+
+## 18 Source References
+
+| # | Repo | Digunakan Untuk |
+|---|------|----------------|
+| 1 | **SmartPack-Kernel-Manager** | Sysfs catalog, KCAL, bypass charging, hotplug |
+| 2 | **Xtra-Kernel-Manager** | Rust JNI bridge, I/O engine pattern |
+| 3 | **ZKM** | GPU discovery, Bus DCVS, Material 3 UI |
+| 4 | **AZenith** | Game detection, bypass auto-discovery |
+| 5 | **Encore Tweaks** | C++ daemon, SoC-aware profiler |
+| 6 | **SkiaShift** | GPU renderer switch, resetprop |
+| 7 | **DPIS** | DPI scaling, DisplayMetrics hooks |
+| 8 | **COPG** | mmap COW property spoof |
+| 9 | **Shizuku+API** | Binder IPC, UserService |
+| 10 | **RvKernel** | Dynamic probing, Material 3 UI |
+| 11 | **KernelSU-Next** | Kernel root, module system |
+| 12 | **ZygiskNext** | Zygisk API, companion IPC |
+| 13 | **Vector** | LSPlant ART hook |
+| 14 | **LogFox** | Crash logging, logcat parser |
+| 15 | **DevCheck** | KGSL IOCTL, BatteryManager API |
+| 16 | **ZN-AuditPatch** | Audit log replacement |
+| 17 | **FPSViewer** | SurfaceFlinger FPS overlay |
+| 18 | **Xiaomi Stock ROM** | 200+ sysfs paths verified |
+
+---
+
+## Stock ROM Vendor Extraction
+
+**Source:** `vendor/etc/init/*.rc` (271 sysfs references)  
+**Source:** `vendor/etc/selinux/vendor_sepolicy.cil`  
+**Source:** `vendor/build.prop`, `vendor/build_surya.prop`  
+
+### Sysfs Path Catalog
+
+| Kategori | Path | Fungsi |
+|----------|------|--------|
+| CPU Governor | `/sys/devices/system/cpu/cpufreq/policy0/scaling_governor` | Governor selection |
+| CPU Freq | `/sys/devices/system/cpu/cpufreq/policy0/scaling_max_freq` | Max freq limit |
+| CPU Core | `/sys/devices/system/cpu/cpu{N}/online` | Core online/offline |
+| GPU Freq | `/sys/class/kgsl/kgsl-3d0/gpuclk` | GPU clock |
+| GPU Power | `/sys/class/kgsl/kgsl-3d0/max_pwrlevel` | Power level |
+| GPU Model | `/sys/kernel/gpu/gpu_model` | GPU model string |
+| Xiaomi Charge | `/sys/class/qcom-battery/reverse_chg_mode` | Reverse charging |
+| Xiaomi Charge | `/sys/class/qcom-battery/night_charging` | Night charging |
+| Xiaomi Charge | `/sys/class/qcom-battery/cool_mode` | Cool mode |
+| Xiaomi Charge | `/sys/class/qcom-battery/smart_batt` | Smart battery |
+| Xiaomi Display | `/sys/devices/platform/kcal_ctrl.0/kcal` | KCAL color |
+| Xiaomi Haptic | `/sys/bus/i2c/drivers/aw8697_haptic/2-005a/f0_save` | LRA freq |
+| USB PD | `/sys/class/usbpd/usbpd0/usbpd_verifed` | USB PD auth |
+| Battery | `/sys/class/power_supply/battery/capacity` | Battery level |
+| Thermal | `/sys/class/thermal/thermal_message/sconfig` | Thermal config |
+| Writable by | `farewell_service` (daemon) | via SELinux policy |
+
+### HAL Services (from vendor/etc/init/*.rc)
+
+| Service | Binary | Fungsi |
+|---------|--------|--------|
+| `vendor.xiaomi.hardware.micharge` | `.../micharge@1.0-service` | Xiaomi charging control |
+| `vendor.xiaomi.hardware.displayfeature` | `.../displayfeature@1.0-service` | Display features |
+| `vendor.xiaomi.hardware.touchfeature` | `.../touchfeature@1.0-service` | Touch control |
+| `vendor.xiaomi.hardware.vibratorfeature` | `.../vibratorfeature.service` | Haptic control |
+| `batterysecret` | `vendor/bin/batterysecret` | USB PD authentication |
+
+---
 
 ## Build
 
 ```bash
-# Rust SDK
+# 1. Rust SDK (native library)
 cd rust/kernel-manager
-rustup target add aarch64-linux-android
 cargo ndk -t arm64-v8a -o ../../android/app/src/main/jniLibs build --release
 
-# Android APK
+# 2. Android app
 cd android
+$env:JAVA_HOME = "C:\Program Files\Android\openjdk\jdk-21.0.8"
 ./gradlew assembleDebug
 # → android/app/build/outputs/apk/debug/app-arm64-v8a-debug.apk
 
-# Install
-adb install -r android/app/build/outputs/apk/debug/app-arm64-v8a-debug.apk
+# 3. Farewell daemon (ROM-side)
+cd tools
+aarch64-linux-android31-clang -O2 -static -o farewelld farewelld.c
 ```
 
-## Source References (18 repos)
+---
 
-| # | Repo | Language | What We Used |
-|---|------|----------|-------------|
-| 1 | SmartPack-Kernel-Manager | Java | Sysfs catalog, hotplug, KCAL, bypass charging |
-| 2 | Xtra-Kernel-Manager | Kotlin+Rust | JNI bridge pattern, Rust I/O engine |
-| 3 | ZKM | Kotlin/Compose | GPU discovery, Bus DCVS, Material 3 |
-| 4 | AZenith | C+Kotlin | Game detection, bypass auto-discovery |
-| 5 | Encore Tweaks | C+++Vue | C++ daemon, SoC-aware profiler |
-| 6 | SkiaShift | Kotlin+C++ | GPU renderer switch, resetprop |
-| 7 | DPIS | Java+Xposed | DPI scaling, DisplayMetrics hooks |
-| 8 | COPG | C++ | mmap COW property spoof |
-| 9 | Shizuku+API | Java/Kotlin | Binder IPC, UserService |
-| 10 | RvKernel | Kotlin/Comp. | Dynamic probing, Material 3 UI |
-| 11 | KernelSU-Next | Rust+Kotlin | Kernel root, module system |
-| 12 | ZygiskNext | C++ | Zygisk API, companion IPC |
-| 13 | Vector | Java+C++ | LSPlant ART hook |
-| 14 | LogFox | Kotlin | Crash logging, logcat parser |
-| 15 | DevCheck | C+Java | KGSL IOCTL, BatteryManager API |
-| 16 | ZN-AuditPatch | C++ | Audit log replacement |
-| 17 | FPSViewer | Java | SurfaceFlinger FPS overlay |
-| 18 | Xiaomi Stock ROM | — | 200+ sysfs paths verified |
+## Inject ke Custom ROM
+
+```
+1. Unpack super.img (simg2img + lpunpack)
+2. Mount vendor.img
+3. copy farewelld → vendor/bin/hw/         (chmod 755)
+4. copy farewell.rc → vendor/etc/init/      (chmod 644)
+5. copy farewell_service.cil → vendor/etc/selinux/ (chmod 644)
+6. Edit vendor_file_contexts → +1 baris
+7. Umount → repack super.img
+8. fastboot flash super super.img
+9. Install app via adb
+```
+
+---
+
+## Diagnostic
+
+| Feature | Rust | JNI | Kotlin UI |
+|---------|------|-----|-----------|
+| CPU Governor R/W | ✅ cpu.rs | ✅ | ✅ SoCScreen |
+| CPU Freq R/W | ✅ cpu.rs | ✅ | ✅ SoCScreen |
+| GPU Freq/Model | ✅ gpu.rs | ✅ | ✅ SoCScreen |
+| GPU Power Levels | ✅ gpu.rs | ✅ | ✅ SoCScreen |
+| Battery API | ✅ power.rs | ✅ | ✅ Dashboard |
+| Xiaomi Charging | ✅ power_xiaomi.rs | ✅ | ✅ Battery |
+| KCAL Display | ✅ display_xiaomi.rs | ✅ | ✅ Display |
+| AW8697 Haptic | ✅ haptic.rs | ✅ | ✅ Xiaomi |
+| QCOM Boot | ✅ boot_qcom.rs | ✅ | ✅ Xiaomi |
+| STune/Cpuset | ✅ stune.rs | ✅ | ✅ SoC Adv |
+| Memory/ZRAM | ✅ memory.rs | ✅ | ✅ Memory |
+| Thermal | ✅ thermal.rs | ✅ | ✅ Thermal |
+| Kernel Params | ✅ network.rs, sysctl_qcom.rs | ✅ | ✅ Kernel |
+| Feature Checker | ✅ checker.rs | ✅ | ✅ Diagnostic |
+
+**Total: 151/169 fitur (89%) — 27 Rust modules, 269 JNI exports**
+
+---
+
+## Project Structure
+
+```
+farewell-ex/
+├── rust/kernel-manager/src/    ← 27 Rust modules (sysfs engine)
+├── android/app/src/main/java/  ← Kotlin/Compose UI
+│   ├── kernel/                 ← NativeLib, AccessManager, daemon
+│   ├── viewmodel/              ← 7+ ViewModels
+│   └── ui/                     ← Compose screens + widgets
+├── knowledge/                  ← Feature catalog + references
+├── tools/                      ← Daemon source + build scripts
+├── data/                       ← Project registry
+└── training/references/        ← 18 cloned source repos
+```

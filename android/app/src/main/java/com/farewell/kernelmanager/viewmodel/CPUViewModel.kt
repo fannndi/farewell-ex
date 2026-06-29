@@ -1,7 +1,7 @@
 package com.farewell.kernelmanager.viewmodel
 
-import com.farewell.kernelmanager.kernel.native.NativeLib
-import com.farewell.kernelmanager.kernel.reader.SysfsReader
+import com.farewell.kernelmanager.kernel.NativeLib
+import com.farewell.kernelmanager.kernel.SysfsReader
 
 data class CpuState(
     val clusters: List<NativeLib.ClusterInfo> = emptyList(),

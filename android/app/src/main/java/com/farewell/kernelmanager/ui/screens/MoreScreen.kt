@@ -18,7 +18,6 @@ private data class MenuItem(val title: String, val desc: String, val icon: Image
 @Composable
 fun MoreScreen(onNavigate: (String) -> Unit) {
     val items = listOf(
-        MenuItem("Memory", "RAM, ZRAM, VM params", Icons.Default.Storage, "memory"),
         MenuItem("Thermal", "Thermal zones, MSM/EARA/FPSGO", Icons.Default.Thermostat, "thermal"),
         MenuItem("Kernel Params", "Sched, TCP, printk, dmesg", Icons.Default.Tune, "kernel"),
         MenuItem("Display", "KCAL, DFPS, dimmer", Icons.Default.BrightnessHigh, "display"),

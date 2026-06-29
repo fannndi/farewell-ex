@@ -1,4 +1,4 @@
-package com.farewell.kernelmanager.kernel.reader
+package com.farewell.kernelmanager.kernel
 
 import android.content.Context
 import android.content.IntentFilter

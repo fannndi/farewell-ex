@@ -1,7 +1,7 @@
 package com.farewell.kernelmanager
 
 import android.app.Application
-import com.farewell.kernelmanager.kernel.reader.SysfsReader
+import com.farewell.kernelmanager.kernel.SysfsReader
 import com.topjohnwu.superuser.Shell
 
 class App : Application() {

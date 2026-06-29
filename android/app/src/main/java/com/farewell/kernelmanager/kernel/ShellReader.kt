@@ -1,4 +1,4 @@
-package com.farewell.kernelmanager.kernel.reader
+package com.farewell.kernelmanager.kernel
 
 import android.util.Log
 import java.io.BufferedReader

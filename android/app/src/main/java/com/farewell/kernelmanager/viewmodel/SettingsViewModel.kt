@@ -1,7 +1,7 @@
 package com.farewell.kernelmanager.viewmodel
 
 import androidx.lifecycle.ViewModel
-import com.farewell.kernelmanager.kernel.native.NativeLib
+import com.farewell.kernelmanager.kernel.NativeLib
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 

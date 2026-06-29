@@ -9,7 +9,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.farewell.kernelmanager.kernel.native.NativeLib
+import com.farewell.kernelmanager.kernel.NativeLib
 import com.farewell.kernelmanager.ui.components.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext

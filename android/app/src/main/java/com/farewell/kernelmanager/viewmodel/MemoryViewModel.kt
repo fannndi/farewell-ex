@@ -1,7 +1,7 @@
 package com.farewell.kernelmanager.viewmodel
 
 import android.util.Log
-import com.farewell.kernelmanager.kernel.native.NativeLib
+import com.farewell.kernelmanager.kernel.NativeLib
 
 data class MemoryState(
     val totalMb: Long = 0, val availableMb: Long = 0, val usedMb: Long = 0, val cachedMb: Long = 0,

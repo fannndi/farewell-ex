@@ -1,7 +1,7 @@
 package com.farewell.kernelmanager.viewmodel
 
 import android.util.Log
-import com.farewell.kernelmanager.kernel.native.NativeLib
+import com.farewell.kernelmanager.kernel.NativeLib
 
 data class GameState(
     val preset: String = "balanced",

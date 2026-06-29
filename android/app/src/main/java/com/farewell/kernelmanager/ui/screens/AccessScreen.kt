@@ -16,8 +16,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.farewell.kernelmanager.kernel.access.AccessManager
-import com.farewell.kernelmanager.kernel.access.AccessMode
+import com.farewell.kernelmanager.kernel.AccessManager
+import com.farewell.kernelmanager.kernel.AccessMode
 import com.farewell.kernelmanager.viewmodel.MainViewModel
 import kotlinx.coroutines.launch
 
@@ -72,7 +72,7 @@ fun AccessScreen(viewModel: MainViewModel, snackbar: SnackbarHostState? = null) 
                     if (!isActive) {
                         scope.launch {
                             viewModel.detectAccessMode()
-                            snackbar?.showSnackbar("Access: ${com.farewell.kernelmanager.kernel.access.AccessManager.currentMode.name}")
+                            snackbar?.showSnackbar("Access: ${com.farewell.kernelmanager.kernel.AccessManager.currentMode.name}")
                         }
                     }
                 },

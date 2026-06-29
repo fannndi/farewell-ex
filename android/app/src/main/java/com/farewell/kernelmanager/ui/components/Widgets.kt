@@ -93,33 +93,6 @@ fun ExpandableCard(
 }
 
 @Composable
-fun SliderCard(
-    icon: ImageVector, title: String, value: String,
-    sliderValue: Float, onValueChange: (Float) -> Unit,
-    valueRange: ClosedFloatingPointRange<Float> = 0f..100f,
-    modifier: Modifier = Modifier
-) {
-    Card(
-        modifier = modifier,
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceBright)
-    ) {
-        Column(modifier = Modifier.padding(16.dp).fillMaxWidth()) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(modifier = Modifier.clip(CircleShape).size(40.dp).padding(8.dp), contentAlignment = Alignment.Center) {
-                    Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                }
-                Spacer(Modifier.width(12.dp))
-                Text(title, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-                Text(value, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-            Spacer(Modifier.height(8.dp))
-            Slider(value = sliderValue, onValueChange = onValueChange, valueRange = valueRange)
-        }
-    }
-}
-
-@Composable
 fun SectionHeader(title: String, modifier: Modifier = Modifier) {
     Text(title, style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
         color = MaterialTheme.colorScheme.primary, modifier = modifier.padding(top = 8.dp, bottom = 4.dp))

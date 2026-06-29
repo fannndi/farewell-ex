@@ -1,7 +1,6 @@
-package com.farewell.kernelmanager.kernel.access
+package com.farewell.kernelmanager.kernel
 
 import android.util.Log
-import com.farewell.kernelmanager.kernel.native.NativeLib
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
